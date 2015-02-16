@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: elnappo <elnappoo@gmail.com>
-  description: 
+  description: Install check_mk agent
   license: MIT
   min_ansible_version: 1.8
   platforms:
