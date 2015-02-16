@@ -1,0 +1,22 @@
+---
+language: python
+python: "2.7"
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq python-apt python-pycurl curl ufw
+install:
+  - pip install ansible
+  - ansible --version
+  - "{ echo '[defaults]'; echo 'roles_path = ../'; } >> ansible.cfg"
+  - echo localhost > inventory
+script:
+  - ansible-playbook -i inventory --syntax-check --list-tasks test.yml
+  - ansible-playbook -i inventory --connection=local --sudo -vvvv test.yml
+  - >
+    ansible-playbook -i inventory --connection=local --sudo test.yml
+    | grep -q 'changed=0.*failed=0'
+    && (echo 'Idempotence test: pass' && exit 0)
+    || (echo 'Idempotence test: fail' && exit 1)
+  - check_mk_agent
+after_script:
+  - ls -la /usr/lib/check_mk_agent/plugins/

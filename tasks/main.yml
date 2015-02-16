@@ -1,0 +1,23 @@
+---
+# tasks file for agent
+- name: Install requierments
+  apt: name=xinit state=present
+  when: not check_mk_agent_over_ssh
+
+- name: Download check_mk agent deb package
+  get_url: url=https://mathias-kettner.de/download/{{ check_mk_agent_deb_package }} dest=/root/{{ check_mk_agent_deb_package }} validate_certs=no
+
+- name: Install deb package
+  apt: deb=/root/{{ check_mk_agent_deb_package }}
+
+- name: Setup SSH key
+  authorized_key: user=root key_options='command="/usr/bin/check_mk_agent"' key="{{ lookup('file', check_mk_agent_pubkey_file) }}"
+  when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file
+
+- name: Install plugin requierments
+  apt: name={{ item }} state=present
+  with_items: check_mk_agent_plugins_requirements
+ 
+- name: Transfer plugins
+  copy: src=plugins/{{ item }} dest=/usr/lib/check_mk_agent/plugins/{{ item }} owner=root group=root mode=0755
+  with_items: check_mk_agent_plugins
