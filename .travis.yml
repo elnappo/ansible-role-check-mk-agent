@@ -9,7 +9,7 @@ before_install:
 install:
   - pip install ansible --upgrade
   - ansible --version
-  - "{ echo '[defaults]'; echo 'roles_path = ../'; } >> ansible.cfg"
+  - printf '[defaults]\nroles_path=../' >ansible.cfg
   - echo localhost > inventory
 script:
   - ansible-playbook -i inventory --syntax-check --list-tasks test.yml
@@ -22,3 +22,5 @@ script:
   - check_mk_agent
 after_script:
   - ls -la /usr/lib/check_mk_agent/plugins/
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/

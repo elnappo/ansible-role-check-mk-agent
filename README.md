@@ -2,7 +2,7 @@
 Installs check mk agent. Run it with xinit or over ssh (default). Get more informations about check mk at [https://mathias-kettner.de/check_mk.html]()
 
 ## Requirements
-Ubuntu or Debian
+Only testet with Ubuntu and Debian, should run on more platforms.
 
 ## Role Variables
 * `check_mk_agent_deb_package: check-mk-agent_1.2.4p5-2_all.deb`
@@ -43,12 +43,18 @@ Ubuntu or Debian
 None.
 
 ## Example Playbook
-    - hosts: servers
-      roles:
-         - { role: elnappoo.check-mk-agent, check_mk_agent_pubkey_file: omd_rsa.pub }
+
+```yaml
+- hosts: servers
+  remote_user: root
+  roles:
+     - { role: elnappoo.check-mk-agent, check_mk_agent_pubkey_file: omd_rsa.pub }
+```
 
 ## License
+
 MIT
 
 ## Author Information
-elnappo <elnappoo@gmail.com>
+
+elnappo <elnappo@nerdpol.io>
