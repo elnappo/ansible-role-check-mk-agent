@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -23,16 +23,24 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
+# this is for users who compiled statgrab on hp-ux.
+# note you'll need a 0.18+ version, from their github page at
+# https://github.com/i-scream/libstatgrab
+# flags used for compiling - disable documentation, examples and set*id
 
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
-fi
 
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
-then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
+if which statgrab > /dev/null ; then
+    if statgrab const. cpu. general. mem. page. proc. swap. user. > /tmp/statgrab.$$ 2>/dev/null
+        then
+        for s in proc cpu page
+        do
+            echo "<<<statgrab_$s>>>"
+            cat /tmp/statgrab.$$ | grep "^$s\." | cut -d. -f2-99 | sed 's/ *= */ /'
+        done
+
+        echo '<<<statgrab_mem>>>'
+        cat /tmp/statgrab.$$ | egrep "^(swap|mem)\." | sed 's/ *= */ /'
+
+    fi
+    [ -f /tmp/statgrab.$$ ] && rm -f /tmp/statgrab.$$
 fi

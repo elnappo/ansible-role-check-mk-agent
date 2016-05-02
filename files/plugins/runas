@@ -1,0 +1,84 @@
+#!/bin/bash
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+# This plugin allows to execute mrpe, local and plugin skripts with a different user context
+# It is configured with in the file $MK_CONFDIR/runas.cfg
+#
+# Syntax:
+# [Script type] [User context] [File / Directory]
+#
+# Example configuration
+# # Execute mrpe commands in given files under specific user
+# # A '-' means no user context switch
+# mrpe ab /home/ab/mrpe_commands.cfg
+# mrpe lm /home/lm/mrpe_commands.cfg
+# mrpe - /root/mrpe/extra_commands.cfg
+#
+# Excecute -executable- files in the target directories under specific user context
+# plugin ab /var/ab/plugins
+# local ab /var/ab/local
+#
+
+grep -Ev '^[[:space:]]*($|#)' "$MK_CONFDIR/runas.cfg" | \
+while read type user include
+do
+    if [ -d $include -o \( "$type" == "mrpe" -a -f $include \) ] ; then
+        PREFIX=""
+        if [ "$user" != "-" ] ; then
+            PREFIX="su $user -c "
+        fi
+
+        # mrpe includes
+        if [ "$type" == "mrpe" ] ; then
+            echo "<<<mrpe>>>"
+            grep -Ev '^[[:space:]]*($|#)' "$include" | \
+            while read descr cmdline
+            do
+                PLUGIN=${cmdline%% *}
+                if [ -n "$PREFIX" ] ; then
+                    cmdline="$PREFIX\"$cmdline\""
+                fi
+                OUTPUT=$(eval "$cmdline")
+                echo -n "(${PLUGIN##*/}) $descr $? $OUTPUT" | tr \\n \\1
+                echo
+            done
+        # local and plugin includes
+        elif [ "$type" == "local" -o "$type" == "plugin" ] ; then
+            if [ "$type" == "local" ] ; then
+                echo "<<<local>>>"
+            fi
+            find $include -executable -type f | \
+            while read filename
+            do
+                if [ -n "$PREFIX" ] ; then
+                    cmdline="$PREFIX\"$filename\""
+                else
+                    cmdline=$filename
+                fi
+                $cmdline
+            done
+        fi
+    fi
+done

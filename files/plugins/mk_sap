@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# encoding: utf-8
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -7,7 +7,7 @@
 # |           | |___| | | |  __/ (__|   <    | |  | | . \            |
 # |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
 # |                                                                  |
-# | Copyright Mathias Kettner 2013             mk@mathias-kettner.de |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
 # +------------------------------------------------------------------+
 #
 # This file is part of Check_MK.
@@ -23,7 +23,7 @@
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
-#
+
 # This agent plugin has been built to collect information from SAP R/3 systems
 # using RFC calls. It needs the python module sapnwrfc (available in Check_MK
 # git at agents/sap/sapnwrfc) and the nwrfcsdk (can be downloaded from SAP
@@ -38,7 +38,7 @@
 #
 # During development the "CCMS_Doku.pdf" was really helpful.
 
-import os, sys
+import os, sys, fcntl
 import time, datetime
 
 # sapnwrfc needs to know where the libs are located. During
@@ -55,6 +55,9 @@ except ImportError, e:
             'create the file /etc/ld.so.conf.d/sapnwrfc.conf containing the path\n'
             '"/usr/sap/nwrfcsdk/lib" and run "ldconfig" afterwards.\n'
         )
+        sys.exit(1)
+    elif 'No module named sapnwrfc' in str(e):
+        sys.stderr.write("Missing the Python module sapnwfrc.\n")
         sys.exit(1)
     else:
         raise
@@ -105,12 +108,16 @@ SKIP_MTCLASSES = [
     MTE_LONG_TXT,
 ]
 
-STATE_FILE = '/etc/check_mk/sap.state'
+MK_CONFDIR = os.getenv("MK_CONFDIR") or "/etc/check_mk"
+MK_VARDIR = os.getenv("MK_VARDIR") or "/var/lib/check_mk_agent"
+
+STATE_FILE = MK_VARDIR + '/sap.state'
+state_file_changed = False
 
 # #############################################################################
 
 # Settings to be used to connect to the SAP R/3 host.
-cfg = {
+local_cfg = {
     'ashost':   'localhost',
     'sysnr':    '00',
     'client':   '100',
@@ -136,16 +143,25 @@ monitor_paths = [
     'SAP CCMS Monitor Templates/Dialog Overview/*',
 ]
 monitor_types = []
+config_file = MK_CONFDIR + '/sap.cfg'
 
-config_file = os.getenv('MK_CONFDIR', '/etc/check_mk') + '/sap.cfg'
+cfg = {}
 if os.path.exists(config_file):
     execfile(config_file)
+    if type(cfg) == dict:
+        cfg = [ cfg ]
+else:
+    cfg = [ local_cfg ]
 
 # Load the state file into memory
 try:
     states = eval(file(STATE_FILE).read())
 except IOError:
     states = {}
+
+# index of all logfiles which have been found in a run. This is used to
+# remove logfiles which are not available anymore from the states dict.
+logfiles = []
 
 # #############################################################################
 
@@ -212,7 +228,7 @@ def logout():
         'INTERFACE':  'XAL',
     })
 
-def mon_list():
+def mon_list(cfg):
     f = query("BAPI_SYSTEM_MON_GETLIST", {
         'EXTERNAL_USER_NAME': cfg['user'],
     })
@@ -221,16 +237,16 @@ def mon_list():
         l.append((mon["MS_NAME"].rstrip(), mon["MONI_NAME"].rstrip()))
     return l
 
-def ms_list():
-    f = query("BAPI_SYSTEM_MS_GETLIST", {
-        'EXTERNAL_USER_NAME': cfg['user'],
-    })
-    l = []
-    for ms in f.MONITOR_SETS.value:
-        l.append(ms['NAME'].rstrip())
-    return l
+#def ms_list( cfg ):
+#    f = query("BAPI_SYSTEM_MS_GETLIST", {
+#        'EXTERNAL_USER_NAME': cfg['user'],
+#    })
+#    l = []
+#    for ms in f.MONITOR_SETS.value:
+#        l.append(ms['NAME'].rstrip())
+#    return l
 
-def mon_tree(ms_name, mon_name):
+def mon_tree(cfg, ms_name, mon_name):
     f = query("BAPI_SYSTEM_MON_GETTREE", {
         'EXTERNAL_USER_NAME': cfg['user'],
         'MONITOR_NAME':       {"MS_NAME": ms_name, "MONI_NAME": mon_name},
@@ -251,7 +267,7 @@ def tid(node):
        'EXTINDEX':   node['EXTINDEX'].strip(),
     }
 
-def mon_perfdata(node):
+def mon_perfdata(cfg, node):
     f = query('BAPI_SYSTEM_MTE_GETPERFCURVAL', {
         'EXTERNAL_USER_NAME': cfg['user'],
         'TID': tid(node),
@@ -262,11 +278,13 @@ def mon_perfdata(node):
         'EXTERNAL_USER_NAME': cfg['user'],
         'TID': tid(node),
     })
+    if f.PROPERTIES.value['DECIMALS'] != 0:
+        value = (value + 0.0) / 10**f.PROPERTIES.value['DECIMALS']
     uom = f.PROPERTIES.value['VALUNIT'].strip()
 
     return value, uom
 
-def mon_msg(node):
+def mon_msg(cfg, node):
     f = query('BAPI_SYSTEM_MTE_GETSMVALUE', {
         'EXTERNAL_USER_NAME': cfg['user'],
         'TID': tid(node),
@@ -281,9 +299,9 @@ def parse_dt(d, t):
     if not d or not t:
         return None
     else:
-        return datetime.datetime(*time.strptime(d + t, '%Y%m%d%H%M%S')[:6]) 
+        return datetime.datetime(*time.strptime(d + t, '%Y%m%d%H%M%S')[:6])
 
-def mon_alerts(node):
+def mon_alerts(cfg, node):
     f = query('BAPI_SYSTEM_MTE_GETALERTS', {
         'EXTERNAL_USER_NAME': cfg['user'],
         'TID': tid(node),
@@ -300,7 +318,7 @@ def aid(alert):
         "ALERTTIME": alert["ALERTTIME"],
     }
 
-def alert_details(alert):
+def alert_details(cfg, alert):
     f = query('BAPI_SYSTEM_ALERT_GETDETAILS', {
         'EXTERNAL_USER_NAME': cfg['user'],
         'AID': aid(alert),
@@ -310,8 +328,9 @@ def alert_details(alert):
     msg   =  f.XMI_EXT_MSG.value['MSG'].strip()
     return state, msg
 
-def process_alerts(ms_name, mon_name, node, alerts):
-    global logs
+def process_alerts(cfg, logs, ms_name, mon_name, node, alerts):
+    global state_file_changed
+
     sid     = node["MTSYSID"].strip() or 'Other'
     context = node["MTMCNAME"].strip() or 'Other'
     path    = node["PATH"]
@@ -319,6 +338,8 @@ def process_alerts(ms_name, mon_name, node, alerts):
     # Use the sid as hostname for the logs
     hostname = sid
     logfile  = context + "/" + path
+
+    logfiles.append((hostname, logfile))
 
     logs.setdefault(sid, {})
     logs[hostname][logfile] = []
@@ -332,7 +353,7 @@ def process_alerts(ms_name, mon_name, node, alerts):
         if not newest_log_dt or dt > newest_log_dt:
             newest_log_dt = dt # store the newest log of this run
 
-        alert_state, alert_msg = alert_details(alert)
+        alert_state, alert_msg = alert_details(cfg, alert)
         # Format lines to "logwatch" format
         logs[hostname][logfile].append('%s %s %s' % (STATE_LOGWATCH_MAP[alert_state['VALUE']],
                                                 dt.strftime("%Y-%m-%d %H:%M:%S"), alert_msg))
@@ -340,104 +361,139 @@ def process_alerts(ms_name, mon_name, node, alerts):
     if newest_log_dt:
         # Write newest log age to cache to prevent double processing of logs
         states[(hostname, logfile)] = newest_log_dt
-        file(STATE_FILE, 'w').write(repr(states))
+        state_file_changed = True
+    return logs
 
-try:
+
+
+def check(cfg):
+    global conn
     conn = sapnwrfc.base.rfc_connect(cfg)
-except sapnwrfc.RFCCommunicationError, e:
-    sys.stderr.write('ERROR: Unable to connect (%s)\n' % e)
-    sys.exit(1)
+    login()
 
-#print "connection attributes: ", conn.connection_attributes()
+    logs     = {}
+    sap_data = {}
 
-login()
-
-logs     = {}
-sap_data = {}
-
-# This loop is used to collect all information from SAP
-for ms_name, mon_name in mon_list():
-    path = ms_name + SEPARATOR + mon_name
-    if not to_be_monitored(path, True):
-        continue
-
-    tree = mon_tree(ms_name, mon_name)
-    for node in tree:
-        if not to_be_monitored(node['PATH']):
+    # This loop is used to collect all information from SAP
+    for ms_name, mon_name in mon_list(cfg):
+        path = ms_name + SEPARATOR + mon_name
+        if not to_be_monitored(path, True):
             continue
-        #print node["PATH"]
 
-        status_details = ''
-        perfvalue      = '-'
-        uom            = '-'
+        tree = mon_tree(cfg, ms_name, mon_name)
+        for node in tree:
+            if not to_be_monitored(node['PATH']):
+                continue
+            #print node["PATH"]
 
-        # Use precalculated states
-        state = {
-            'VALUE':    node['ACTUALVAL'],
-            'SEVERITY': node['ACTUALSEV'],
-        }
+            status_details = ''
+            perfvalue      = '-'
+            uom            = '-'
 
-        if state['VALUE'] not in STATE_VALUE_MAP:
-            print 'UNHANDLED STATE VALUE'
-            sys.exit(1)
+            # Use precalculated states
+            state = {
+                'VALUE':    node['ACTUALVAL'],
+                'SEVERITY': node['ACTUALSEV'],
+            }
 
-        #
-        # Handle different object classes individually
-        # to get details about them
-        #
+            if state['VALUE'] not in STATE_VALUE_MAP:
+                print 'UNHANDLED STATE VALUE'
+                sys.exit(1)
 
-        if monitor_types and node['MTCLASS'] not in monitor_types:
-            continue # Skip unwanted classes if class filtering is enabled
+            #
+            # Handle different object classes individually
+            # to get details about them
+            #
 
-        if node['MTCLASS'] == MTE_PERFORMANCE:
-            perfvalue, this_uom = mon_perfdata(node)
-            uom = this_uom and this_uom or uom
+            if monitor_types and node['MTCLASS'] not in monitor_types:
+                continue # Skip unwanted classes if class filtering is enabled
 
-        elif node['MTCLASS'] == MTE_SINGLE_MSG:
-            status_details = "%s: %s" % mon_msg(node)
+            if node['MTCLASS'] == MTE_PERFORMANCE:
+                perfvalue, this_uom = mon_perfdata(cfg, node)
+                uom = this_uom and this_uom or uom
 
-        elif node['MTCLASS'] == MTE_MSG_CONTAINER:
-            alerts = mon_alerts(node)
-            process_alerts(ms_name, mon_name, node, alerts)
-            if len(alerts) > 0:
-                last_alert = alerts[-1]
-                dt = parse_dt(last_alert["ALERTDATE"], last_alert["ALERTTIME"])
-                alert_state, alert_msg = alert_details(last_alert)
-                last_msg = '%s: %s - %s' % (dt, STATE_VALUE_MAP[alert_state['VALUE']][1], alert_msg)
+            elif node['MTCLASS'] == MTE_SINGLE_MSG:
+                status_details = "%s: %s" % mon_msg(cfg, node)
 
-                status_details = '%d Messages, Last: %s' % (len(alerts), last_msg)
-            else:
-                status_details = 'The log is empty'
+            elif node['MTCLASS'] == MTE_MSG_CONTAINER:
 
-        elif node['MTCLASS'] not in SKIP_MTCLASSES:
-            # Add an error to output on unhandled classes
-            status_details = "UNHANDLED MTCLASS", node['MTCLASS']
+                alerts = mon_alerts(cfg, node)
+                logs = process_alerts(cfg, logs, ms_name, mon_name, node, alerts)
+                if len(alerts) > 0:
+                    last_alert = alerts[-1]
+                    dt = parse_dt(last_alert["ALERTDATE"], last_alert["ALERTTIME"])
+                    alert_state, alert_msg = alert_details(cfg, last_alert)
+                    last_msg = '%s: %s - %s' % (dt, STATE_VALUE_MAP[alert_state['VALUE']][1], alert_msg)
 
-        if node['MTCLASS'] not in SKIP_MTCLASSES:
-            sid     = node["MTSYSID"].strip() or 'Other'
-            context = node["MTMCNAME"].strip() or 'Other'
-            path    = node["PATH"]
+                    status_details = '%d Messages, Last: %s' % (len(alerts), last_msg)
+                else:
+                    status_details = 'The log is empty'
 
-            sap_data.setdefault(sid, [])
-            sap_data[sid].append("%s\t%d\t%3d\t%s\t%s\t%s\t%s" % (context, state['VALUE'],
-                                                         state['SEVERITY'], path, perfvalue, uom, status_details))
+            elif node['MTCLASS'] not in SKIP_MTCLASSES:
+                # Add an error to output on unhandled classes
+                status_details = "UNHANDLED MTCLASS", node['MTCLASS']
+
+            if node['MTCLASS'] not in SKIP_MTCLASSES:
+                sid     = node["MTSYSID"].strip() or 'Other'
+                context = node["MTMCNAME"].strip() or 'Other'
+                path    = node["PATH"]
+
+                sap_data.setdefault(sid, [])
+                sap_data[sid].append("%s\t%d\t%3d\t%s\t%s\t%s\t%s" % (context, state['VALUE'],
+                                                             state['SEVERITY'], path, perfvalue, uom, status_details))
 
 
-for host, host_sap in sap_data.items():
-    sys.stdout.write('<<<<%s>>>>\n' % host)
-    sys.stdout.write('<<<sap:sep(9)>>>\n')
-    print '\n'.join(host_sap)
-sys.stdout.write('<<<<>>>>\n')
-
-for host, host_logs in logs.items():
-    sys.stdout.write('<<<<%s>>>>\n' % host)
-    sys.stdout.write('<<<logwatch>>>\n')
-    for log, lines in host_logs.items():
-        sys.stdout.write('[[[%s]]]\n' % log)
-        if lines:
-            sys.stdout.write('\n'.join(lines) + '\n')
+    for host, host_sap in sap_data.items():
+        sys.stdout.write('<<<<%s>>>>\n' % host)
+        sys.stdout.write('<<<sap:sep(9)>>>\n')
+        print '\n'.join(host_sap)
     sys.stdout.write('<<<<>>>>\n')
 
-logout()
-conn.close()
+    for host, host_logs in logs.items():
+        sys.stdout.write('<<<<%s>>>>\n' % host)
+        sys.stdout.write('<<<logwatch>>>\n')
+        for log, lines in host_logs.items():
+            sys.stdout.write('[[[%s]]]\n' % log)
+            if lines:
+                sys.stdout.write('\n'.join(lines) + '\n')
+        sys.stdout.write('<<<<>>>>\n')
+
+    logout()
+    conn.close()
+
+# It is possible to configure multiple SAP instances to monitor. Loop them all, but
+# do not terminate when one connection failed
+processed_all = True
+try:
+    for entry in cfg:
+        try:
+            check(entry)
+        except sapnwrfc.RFCCommunicationError, e:
+            sys.stderr.write('ERROR: Unable to connect (%s)\n' % e)
+            processed_all = False
+        except Exception, e:
+            sys.stderr.write('ERROR: Unhandled exception (%s)\n' % e)
+            processed_all = False
+
+    # Now check whether or not an old logfile needs to be removed. This can only
+    # be done this way, when all hosts have been reached. Otherwise the cleanup
+    # is skipped.
+    if processed_all:
+        for key in states.keys():
+            if key not in logfiles:
+                state_file_changed = True
+                del states[key]
+
+    # Only write the state file once per run. And only when it has been changed
+    if state_file_changed:
+        new_file = STATE_FILE + '.new'
+        fd = os.open(new_file, os.O_WRONLY | os.O_CREAT)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        os.write(fd, repr(states))
+        os.close(fd)
+        os.rename(STATE_FILE+'.new', STATE_FILE)
+
+except Exception, e:
+    sys.stderr.write('ERROR: Unhandled exception (%s)\n' % e)
+
 sys.exit(0)

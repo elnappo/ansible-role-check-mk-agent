@@ -1,7 +1,7 @@
 ---
 # defaults file for agent
-check_mk_agent_deb_package: check-mk-agent_1.2.4p5-2_all.deb
+check_mk_agent_deb_package: check-mk-agent_1.2.6p16-1_all.deb
 check_mk_agent_over_ssh: True
-check_mk_agent_plugins_requirements: ["smartmontools"]
-check_mk_agent_plugins: ["smart", ]
+check_mk_agent_plugins_requirements: []
+check_mk_agent_plugins: []
 check_mk_agent_pubkey_file:

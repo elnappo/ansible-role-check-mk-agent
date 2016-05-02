@@ -1,4 +1,72 @@
 #!/bin/bash
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+
+
+
+# This will be called on LSI based raidcontrollers and accesses
+# the SMART data of SATA disks attached to a SAS Raid HBA via
+# SCSI protocol interface.
+megaraid_info()
+{
+
+    PDINFO=$(MegaCli -PDlist -a0)
+
+    echo "$PDINFO" | \
+    while read line ; do
+        case "$line" in
+           # FIRST LINE
+           "Enclosure Device ID"*) #Enclosure Device ID: 252
+            ENC=$( echo "$line" | awk '{print $4}')
+                  unset SLOT LOG_DEV_ID VEND MODEL
+        ;;
+        "Slot Number"*)  #Slot Number: 7
+            SLOT=$( echo "$line" | awk '{print $3}')
+        ;;
+        # Identify the logical device ID. smartctl needs it to access the disk.
+        "Device Id"*)    #Device Id: 19
+            LOG_DEV_ID=$( echo "$line" | awk '{print $3}')
+        ;;
+        "PD Type"*)      #PD Type: SATA
+            VEND=$( echo "$line" | awk '{print $3}')
+        ;;
+        # This is the last value, generate output here
+        "Inquiry Data"*)
+         #Inquiry Data: WD-WCC1T1035197WDC WD20EZRX-00DC0B0 80.00A80
+            # $4 seems to be better for some vendors... wont be possible to get this perfect.
+            MODEL=$( echo "$line" | awk '{print $3}')
+
+            # /dev/sdc ATA SAMSUNG_SSD_830   5 Reallocated_Sector_Ct   0x0033   100   100   010    Pre-fail  Always       -
+            smartctl -d megaraid,${LOG_DEV_ID} -v 9,raw48 -A /dev/sg0 | \
+              grep Always  | egrep -v '^190(.*)Temperature(.*)'       | \
+              sed "s|^|Enc${ENC}/Slot${SLOT} $VEND $MODEL |"
+            ;;
+            esac
+       done
+}
+
 
 # Only handle always updated values, add device path and vendor/model
 if which smartctl > /dev/null 2>&1 ; then
@@ -9,7 +77,7 @@ if which smartctl > /dev/null 2>&1 ; then
     if which tw_cli > /dev/null 2>&1 ; then
 	# support for only one controller at the moment
 	TWAC=$(tw_cli show | awk 'NR < 4 { next } { print $1 }' | head -n 1)
-	
+
        # - add a trailing zero to handle case of unused slot
        #   trailing zeros are part of the device links in /dev/disk/by-id/... anyway
        # - only the last 9 chars seem to be relevant
@@ -80,7 +148,14 @@ if which smartctl > /dev/null 2>&1 ; then
 	else
 	    CMD="smartctl -d ata -v 9,raw48 -A $D"
 	fi
-	
+
         [ -n "$CMD" ] && $CMD | grep Always | egrep -v '^190(.*)Temperature(.*)' | sed "s|^|$DNAME $VEND $MODEL |"
     done 2>/dev/null
+
+
+    # Call MegaRaid submodule if conditions are met
+    if which MegaCli > /dev/null && [ -c /dev/sg0 ] ; then
+        megaraid_info
+    fi
 fi
+

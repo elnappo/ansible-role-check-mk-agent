@@ -1,4 +1,27 @@
 #!/bin/bash
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
 
 # Try to detect the postgres user
 if id pgsql >/dev/null 2>&1; then
@@ -11,11 +34,11 @@ fi
 
 echo '<<<postgres_sessions>>>'
 # Postgres 9.2 uses 'query' instead of 'current_query'
-for name in query current_query
-do
-    OUTPUT="$(echo "select $name = '<IDLE>', count(*) from pg_stat_activity group by ($name = '<IDLE>');" |\
-         su - $USER -c "psql --variable ON_ERROR_STOP=1 -d postgres -A -t -F' '" 2>/dev/null)" && break
-done
+QNAME="$(echo "select column_name from information_schema.columns where table_name='pg_stat_activity' and column_name in ('query','current_query');" |\
+        su - $USER -c "psql -d postgres -t -A -F';'")"
+OUTPUT="$(echo "select $QNAME = '<IDLE>', count(*) from pg_stat_activity group by ($QNAME = '<IDLE>');" |\
+    su - $USER -c "psql --variable ON_ERROR_STOP=1 -d postgres -A -t -F' '" 2>/dev/null)"
+
 echo "$OUTPUT"
 # line with number of idle sessions is sometimes missing on Postgre 8.x. This can lead
 # to an altogether empty section and thus the check disappearing.

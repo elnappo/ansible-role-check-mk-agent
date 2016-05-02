@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/sh
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -23,16 +24,15 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
-
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
-fi
-
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
+if [ -f /opt/Symantec/symantec_antivirus/sav ]
 then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
+    echo "<<<symantec_av_updates>>>"
+    /opt/Symantec/symantec_antivirus/sav info -d
+
+    echo "<<<symantec_av_progstate>>>"
+    /opt/Symantec/symantec_antivirus/sav info -a
+
+    echo "<<<symantec_av_quarantine>>>"
+    /opt/Symantec/symantec_antivirus/sav quarantine -l
 fi
+

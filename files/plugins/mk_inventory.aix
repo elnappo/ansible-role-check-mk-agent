@@ -23,16 +23,47 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
+# Run and *send* only once every 4 hours
+INTERVAL=14400
 
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
+FLAGFILE=$MK_CONFDIR/mk_inventory.last.$REMOTE
+NOW=$(date +%s)
+UNTIL=$((NOW + INTERVAL + 600))
+
+#check if flagfile exits
+if [ -e "$FLAGFILE" ]; then
+    LAST_RUN=$(cat $FLAGFILE)
+else
+    #First run of the script
+    LAST_RUN=0
 fi
 
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
+if [ $(( NOW - LAST_RUN )) -ge $INTERVAL ]
 then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
+    echo $NOW > $FLAGFILE
+
+    # List of installed AIX packages
+    if type lslpp >/dev/null; then
+        echo "<<<aix_packages:sep(58):persist($UNTIL)>>>"
+        lslpp -c -L
+    fi
+
+    if type oslevel > /dev/null; then
+        # base level of the system
+        echo "<<<aix_baselevel:persist($UNTIL)>>>"
+        oslevel
+
+        # list the known service packs on a system
+        echo "<<<aix_service_packs:persist($UNTIL)>>>"
+        oslevel -s
+    fi
+
+    # If you run the prtconf command without any flags, it displays the system model, machine serial,
+    # processor type, number of processors, processor clock speed, cpu type, total memory size, network information, filesystem
+    # information, paging space information, and devices information.
+    if type prtconf >/dev/null ; then
+        echo "<<<prtconf:sep(58):persist($UNTIL)>>>"
+        prtconf
+    fi
 fi
+

@@ -631,7 +631,6 @@ sql_asm_diskgroup()
     fi
 }
 
-#.
 #   .--oraenv--------------------------------------------------------------.
 #   |                                                                      |
 #   |                    ___  _ __ __ _  ___ _ ____   __                   |
@@ -709,7 +708,7 @@ function get_oraversion () {
     fi
 }
 
-#.
+#
 #   .--Functions-----------------------------------------------------------.
 #   |             _____                 _   _                              |
 #   |            |  ___|   _ _ __   ___| |_(_) ___  _ __  ___              |
@@ -884,6 +883,10 @@ export -f sqlplus_internal
 export -f do_async_checks
 export -f set_oraenv
 
+function file_age() {
+    /usr/bin/perl -e 'if (! -f $ARGV[0]){die "0000000"};$mtime=(stat($ARGV[0]))[9];print ($^T-$mtime);' "$1"
+}
+
 function run_cached_local () {
     local section=
     if [ "$1" = -s ] ; then local section="echo '<<<$2>>>' ; " ; shift ; fi
@@ -897,18 +900,17 @@ function run_cached_local () {
 
     # Check if the creation of the cache takes suspiciously long and return
     # nothing if the age (access time) of $CACHEFILE.new is twice the MAXAGE
-    local NOW=$(date +%s)
     if [ -e "$CACHEFILE.new" ] ; then
-        local CF_ATIME=$(stat -c %X "$CACHEFILE.new")
-        if [ $((NOW - CF_ATIME)) -ge $((MAXAGE * 2)) ] ; then
+        AGE=$(file_age "$CACHEFILE.new")
+        if [ $AGE -ge $((MAXAGE * 2)) ] ; then
             return
         fi
     fi
 
     # Check if cache file exists and is recent enough
     if [ -s "$CACHEFILE" ] ; then
-        local MTIME=$(stat -c %Y "$CACHEFILE")
-        if [ $((NOW - MTIME)) -le $MAXAGE ] ; then local USE_CACHEFILE=1 ; fi
+        AGE=$(file_age "$CACHEFILE")
+        if [ $AGE -le $MAXAGE ] ; then local USE_CACHEFILE=1 ; fi
         # Output the file in any case, even if it is
         # outdated. The new file will not yet be available
         cat "$CACHEFILE"
@@ -944,12 +946,12 @@ SIDS=$(UNIX95=true ps -ef | awk '{print $NF}' | grep -E '^asm_pmon_|^ora_pmon_|^
 # no ORACLE is present on this system or it's just currently not running.
 # In the later case we ouput empty agent sections so that Check_MK will be
 # happy and execute the actual check functions.
-if [ -z "$SIDS" -a ! -e "$MK_VARDIR/mk_oracle.found" ] ; then
+if [ -z "$SIDS" -a ! -e "$MK_CONFDIR/mk_oracle.found" ] ; then
     exit
 fi
 
 # From now on we expect databases on this system (for ever)
-touch $MK_VARDIR/mk_oracle.found
+touch $MK_CONFDIR/mk_oracle.found
 
 # Make sure that always all sections are present, even
 # in case of an error. Note: the section <<<oracle_instance>>>

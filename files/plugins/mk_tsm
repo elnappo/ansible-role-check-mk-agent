@@ -1,4 +1,27 @@
 #!/usr/bin/ksh
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
 
 # Agent for Linux/UNIX for Tivoli Storage Manager (TSM)
 
@@ -20,7 +43,7 @@ fi
 
 do_tsm_checks ()
 {
-    INST=${DSMSERV_DIR##*/} 
+    INST=${DSMSERV_DIR##*/}
 
     # If we have no instance name, we take 'default'
     if [ -z "$INST" ] ; then INST=default ; fi
@@ -44,11 +67,11 @@ EOF
     $dsmcmd <<EOF | sed -n "/^FOO/s//$INST/p"
 SELECT 'FOO', type, stgpool_name, sum(logical_mb) from occupancy group by type, stgpool_name
 EOF
-    
+
 }
 
 # Find in the list of processes TSM daemons. Example output of 'ps xewwg'
-# 8781984      - A    127:26 dsmserv _=/usr/bin/dsmserv LANG=en_US LOGIN=root PATH=/usr/bin:/etc:/usr/sbin:/usr/ucb:/usr/bin/X11:/sbin:/usr/java5/jre/bin:/usr/java5/bin LC_ALL=en_US DSMSERV_CONFIG=/foobar_17g/dsmserv.opt LC__FASTMSG=true LOGNAME=root MAIL=/var/spool/mail/root LOCPATH=/usr/lib/nls/loc DSMSERV_DIR=/foobar_17g USER=root AUTHSTATE=compat AIXTHREAD_MNRATIO=1:1 SHELL=/usr/bin/ksh ODMDIR=/etc/objrepos HOME=/ SSH_CLIENT=192.168.21.199 37725 22 SSH_CONNECTION=192.168.21.199 37725 192.168.21.214 22 PWD=/foobar_17g TZ=Europe/Bucharest AIXTHREAD_SCOPE=S DSMSERV_ACCOUNTING_DIR=/foobar_17g/acc NLSPATH=/usr/lib/nls/msg/%L/%N:/usr/lib/nls/msg/%L/%N.cat LIBPATH=/usr/local/Centera_SDK/lib/64/ 
+# 8781984      - A    127:26 dsmserv _=/usr/bin/dsmserv LANG=en_US LOGIN=root PATH=/usr/bin:/etc:/usr/sbin:/usr/ucb:/usr/bin/X11:/sbin:/usr/java5/jre/bin:/usr/java5/bin LC_ALL=en_US DSMSERV_CONFIG=/foobar_17g/dsmserv.opt LC__FASTMSG=true LOGNAME=root MAIL=/var/spool/mail/root LOCPATH=/usr/lib/nls/loc DSMSERV_DIR=/foobar_17g USER=root AUTHSTATE=compat AIXTHREAD_MNRATIO=1:1 SHELL=/usr/bin/ksh ODMDIR=/etc/objrepos HOME=/ SSH_CLIENT=192.168.21.199 37725 22 SSH_CONNECTION=192.168.21.199 37725 192.168.21.214 22 PWD=/foobar_17g TZ=Europe/Bucharest AIXTHREAD_SCOPE=S DSMSERV_ACCOUNTING_DIR=/foobar_17g/acc NLSPATH=/usr/lib/nls/msg/%L/%N:/usr/lib/nls/msg/%L/%N.cat LIBPATH=/usr/local/Centera_SDK/lib/64/
 
 ps xewwg | sed -n '/ dsmserv .* DSMSERV_CONFIG=/s/^.* dsmserv //p' | \
 while read line

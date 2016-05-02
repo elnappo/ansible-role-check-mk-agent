@@ -7,7 +7,7 @@
 # |           | |___| | | |  __/ (__|   <    | |  | | . \            |
 # |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
 # |                                                                  |
-# | Copyright Mathias Kettner 2010             mk@mathias-kettner.de |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
 # +------------------------------------------------------------------+
 #
 # This file is part of Check_MK.
@@ -26,8 +26,7 @@
 
 # Call with -d for debug mode: colored output, no saving of status
 
-import sys, os, re, time
-import glob
+import sys, os, re, time, glob
 
 if '-d' in sys.argv[1:] or '--debug' in sys.argv[1:]:
     tty_red     = '\033[1;31m'
@@ -50,16 +49,18 @@ else:
 # If that is not set either, the current directory ist
 # used.
 logwatch_dir = os.getenv("LOGWATCH_DIR")
-if not logwatch_dir:
-    logwatch_dir = os.getenv("MK_CONFDIR")
-    if not logwatch_dir:
-        logwatch_dir = "."
+if logwatch_dir:
+    mk_confdir = logwatch_dir
+    mk_vardir = logwatch_dir
+else:
+    mk_confdir = os.getenv("MK_CONFDIR") or "."
+    mk_vardir = os.getenv("MK_VARDIR") or "."
 
 print "<<<logwatch>>>"
 
-config_filename = logwatch_dir + "/logwatch.cfg"
-status_filename = logwatch_dir + "/logwatch.state"
-config_dir      = logwatch_dir + "/logwatch.d/*.cfg"
+config_filename = mk_confdir + "/logwatch.cfg"
+config_dir      = mk_confdir + "/logwatch.d/*.cfg"
+status_filename = mk_vardir + "/logwatch.state"
 
 def is_not_comment(line):
     if line.lstrip().startswith('#') or \
@@ -118,7 +119,7 @@ def parse_cont_pattern(pattern):
         except:
             if debug:
                 raise
-            raise Exception("Invalid regular expression in line '%s'" % pattern) 
+            raise Exception("Invalid regular expression in line '%s'" % pattern)
 
 # structure of statusfile
 # # LOGFILE         OFFSET    INODE
@@ -155,7 +156,7 @@ def save_status(status):
         f.write("%s|%d|%d\n" % (filename, offset, inode))
 
 pushed_back_line = None
-def next_line(f):
+def next_line(file_handle):
     global pushed_back_line
     if pushed_back_line != None:
         line = pushed_back_line
@@ -163,7 +164,7 @@ def next_line(f):
         return line
     else:
         try:
-            line = f.next()
+            line = file_handle.next()
             return line
         except:
             return None
@@ -177,8 +178,8 @@ def process_logfile(logfile, patterns):
     # before, we set the offset to -1
     offset, prev_inode = status.get(logfile, (-1, -1))
     try:
-        fl = os.open(logfile, os.O_RDONLY)
-        inode = os.fstat(fl)[1] # 1 = st_ino
+        file_desc = os.open(logfile, os.O_RDONLY)
+        inode = os.fstat(file_desc)[1] # 1 = st_ino
     except:
         if debug:
             raise
@@ -188,9 +189,9 @@ def process_logfile(logfile, patterns):
     print "[[[%s]]]" % logfile
 
     # Seek to the current end in order to determine file size
-    current_end = os.lseek(fl, 0, 2) # os.SEEK_END not available in Python 2.4
+    current_end = os.lseek(file_desc, 0, 2) # os.SEEK_END not available in Python 2.4
     status[logfile] = current_end, inode
-        
+
     # If we have never seen this file before, we just set the
     # current pointer to the file end. We do not want to make
     # a fuss about ancient log messages...
@@ -199,7 +200,7 @@ def process_logfile(logfile, patterns):
             return
     	else:
 	    offset = 0
-   
+
 
     # If the inode of the logfile has changed it has appearently
     # been started from new (logfile rotation). At least we must
@@ -221,17 +222,21 @@ def process_logfile(logfile, patterns):
         offset = 0
 
     # now seek to offset where interesting data begins
-    os.lseek(fl, offset, 0) # os.SEEK_SET not available in Python 2.4
-    f = os.fdopen(fl)
+    os.lseek(file_desc, offset, 0) # os.SEEK_SET not available in Python 2.4
+    file_handle = os.fdopen(file_desc)
     worst = -1
     outputtxt = ""
     lines_parsed = 0
     start_time = time.time()
 
     while True:
-        line = next_line(f)
+        line = next_line(file_handle)
         if line == None:
             break # End of file
+
+        # Handle option maxlinesize
+        if opt_maxlinesize != None and len(line) > opt_maxlinesize:
+            line = line[:opt_maxlinesize] + "[TRUNCATED]\n"
 
         lines_parsed += 1
         # Check if maximum number of new log messages is exceeded
@@ -239,7 +244,7 @@ def process_logfile(logfile, patterns):
             outputtxt += "%s Maximum number (%d) of new log messages exceeded.\n" % (
                opt_overflow, opt_maxlines)
             worst = max(worst, opt_overflow_level)
-            os.lseek(fl, 0, 2) # Seek to end of file, skip all other messages
+            os.lseek(file_desc, 0, 2) # Seek to end of file, skip all other messages
             break
 
         # Check if maximum processing time (per file) is exceeded. Check only
@@ -249,7 +254,7 @@ def process_logfile(logfile, patterns):
             outputtxt += "%s Maximum parsing time (%.1f sec) of this log file exceeded.\n" % (
                opt_overflow, opt_maxtime)
             worst = max(worst, opt_overflow_level)
-            os.lseek(fl, 0, 2) # Seek to end of file, skip all other messages
+            os.lseek(file_desc, 0, 2) # Seek to end of file, skip all other messages
             break
 
         level = "."
@@ -264,25 +269,25 @@ def process_logfile(logfile, patterns):
                 for cont_pattern in cont_patterns:
                     if type(cont_pattern) == int: # add that many lines
                         for x in range(cont_pattern):
-                            cont_line = next_line(f)
+                            cont_line = next_line(file_handle)
                             if cont_line == None: # end of file
                                 break
-                            line = line[:-1] + "\1" + cont_line 
+                            line = line[:-1] + "\1" + cont_line
 
                     else: # pattern is regex
                         while True:
-                            cont_line = next_line(f)
+                            cont_line = next_line(file_handle)
                             if cont_line == None: # end of file
                                 break
                             elif cont_pattern.search(cont_line[:-1]):
-                                line = line[:-1] + "\1" + cont_line 
+                                line = line[:-1] + "\1" + cont_line
                             else:
                                 pushed_back_line = cont_line # sorry for stealing this line
                                 break
 
                 # Replacement
                 for replace in replacements:
-                    line = replace.replace('\\0', line) + "\n"
+                    line = replace.replace('\\0', line.rstrip()) + "\n"
                     for nr, group in enumerate(matches.groups()):
                         line = line.replace('\\%d' % (nr+1), group)
 
@@ -297,13 +302,18 @@ def process_logfile(logfile, patterns):
             continue
         outputtxt += "%s%s %s%s\n" % (color, level, line[:-1], tty_normal)
 
-    new_offset = os.lseek(fl, 0, 1) # os.SEEK_CUR not available in Python 2.4
+    new_offset = os.lseek(file_desc, 0, 1) # os.SEEK_CUR not available in Python 2.4
     status[logfile] = new_offset, inode
 
     # output all lines if at least one warning, error or ok has been found
     if worst > -1:
         sys.stdout.write(outputtxt)
         sys.stdout.flush()
+
+    # Handle option maxfilesize, regardless of warning or errors that have happened
+    if opt_maxfilesize != None and offset <= opt_maxfilesize and new_offset > opt_maxfilesize:
+        sys.stdout.write("%sW Maximum allowed logfile size (%d bytes) exceeded.%s\n" % (tty_yellow, opt_maxfilesize, tty_normal))
+
 
 try:
     config = read_config()
@@ -327,6 +337,8 @@ for filenames, patterns in config:
     # Initialize options with default values
     opt_maxlines = None
     opt_maxtime = None
+    opt_maxlinesize = None
+    opt_maxfilesize = None
     opt_regex = None
     opt_overflow = 'C'
     opt_overflow_level = 2
@@ -338,6 +350,10 @@ for filenames, patterns in config:
                 opt_maxlines = int(value)
             elif key == 'maxtime':
                 opt_maxtime = float(value)
+            elif key == 'maxlinesize':
+                opt_maxlinesize = int(value)
+            elif key == 'maxfilesize':
+                opt_maxfilesize = int(value)
             elif key == 'overflow':
                 if value not in [ 'C', 'I', 'W', 'O' ]:
                     raise Exception("Invalid value %s for overflow. Allowed are C, I, O and W" % value)
@@ -358,14 +374,14 @@ for filenames, patterns in config:
         sys.exit(1)
 
 
-    for glob in filenames:
-        if '=' in glob:
+    for glob_pattern in filenames:
+        if '=' in glob_pattern:
             continue
-        logfiles = [ l.strip() for l in os.popen("ls %s 2>/dev/null" % glob).readlines() ]
+        logfiles = glob.glob(glob_pattern)
         if opt_regex:
             logfiles = [ f for f in logfiles if opt_regex.search(f) ]
         if len(logfiles) == 0:
-            print '[[[%s:missing]]]' % glob
+            print '[[[%s:missing]]]' % glob_pattern
         else:
             for logfile in logfiles:
                 process_logfile(logfile, patterns)

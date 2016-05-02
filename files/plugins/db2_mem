@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -6,12 +6,12 @@
 # |           | |___| | | |  __/ (__|   <    | |  | | . \            |
 # |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
 # |                                                                  |
-# | Copyright Mathias Kettner 2010             mk@mathias-kettner.de |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
 # +------------------------------------------------------------------+
-# 
+#
 # This file is part of Check_MK.
 # The official homepage is at http://mathias-kettner.de/check_mk.
-# 
+#
 # check_mk is free software;  you can redistribute it and/or modify it
 # under the  terms of the  GNU General Public License  as published by
 # the Free Software Foundation in version 2.  check_mk is  distributed
@@ -23,11 +23,12 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-BASE_PATH=/var/spool/sylo
+INSTANCES=$(ps -ef | grep db2sysc | awk '{print $1}' | sort -u | grep -v root)
 
-if [ -f "$BASE_PATH/silo.hint" ]; then
-  echo "<<<sylo>>>"
-  stat --printf "%Y " "$BASE_PATH/silo.hint"
-  cat "$BASE_PATH/silo.hint"
-  echo
+if [ "$INSTANCES" ] ; then
+    echo "<<<db2_mem>>>"
+    for INSTANCE in $INSTANCES; do
+        echo "Instance $INSTANCE"
+        su - $INSTANCE -c "db2pd -dbptnmem " | egrep '(Memory Limit|HWM usage)'
+    done
 fi

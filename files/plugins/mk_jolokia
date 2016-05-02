@@ -1,4 +1,28 @@
 #!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
 
 import urllib2, sys, os, socket, pprint
 
@@ -31,7 +55,7 @@ def fetch_var(server, port, path, suburi, itemspec):
     # Only take the value of the object. If the value is an object
     # take the first items first value.
     # {'Catalina:host=localhost,path=\\/test,type=Manager': {'activeSessions': 0}}
-    if 'value' not in obj: 
+    if 'value' not in obj:
         if opt_debug:
             sys.stderr.write("ERROR: not found: %s\n" % path)
         return []
@@ -103,11 +127,14 @@ def query_instance(inst):
 
     # Determine type of server
     server_info = fetch_var(inst["server"], inst["port"], "", inst["suburi"], "")
+
     sys.stdout.write('<<<jolokia_info>>>\n')
     if server_info:
        d = dict(server_info)
        version = d.get(('info', 'version'), "unknown")
        product = d.get(('info', 'product'), "unknown")
+       if inst.has_key("product"):
+           product = inst["product"]
        agentversion = d.get(('agent',), "unknown")
        sys.stdout.write("%s %s %s %s\n" % (inst["instance"], product, version, agentversion))
     else:
@@ -134,6 +161,9 @@ def query_instance(inst):
         for subinstance, value in values:
             if not subinstance and not title:
                 print "INTERNAL ERROR: %s" % value
+                continue
+
+            if "threadStatus" in subinstance or "threadParam" in subinstance:
                 continue
 
             if len(subinstance) > 1:
@@ -170,6 +200,8 @@ global_vars = [
   ( "java.lang:type=Threading/PeakThreadCount",           "PeakThreadCount",         [] ),
   ( "java.lang:type=Threading/TotalStartedThreadCount",   "TotalStartedThreadCount", [] ),
   ( "java.lang:type=Runtime/Uptime",                      "Uptime",                  [] ),
+  ( "java.lang:type=GarbageCollector,name=*/CollectionCount",             "",        [] ),
+  ( "java.lang:type=GarbageCollector,name=*/CollectionTime",             "",         [] ),
 ]
 
 
@@ -189,7 +221,9 @@ specific_vars = {
       ( "*:j2eeType=Servlet,name=default,*/stateName", None, [ "WebModule" ] ),
       # Check not yet working
       ( "*:j2eeType=Servlet,name=default,*/requestCount", None, [ "WebModule" ]),
-
+      ( "*:name=*,type=ThreadPool/maxThreads", None, []),
+      ( "*:name=*,type=ThreadPool/currentThreadCount", None, []),
+      ( "*:name=*,type=ThreadPool/currentThreadsBusy", None, []),
      # too wide location for addressing the right info
      # ( "*:j2eeType=Servlet,*/requestCount", None, [ "WebModule" ] ),
 
@@ -229,12 +263,12 @@ socket.setdefaulttimeout(1.0)
 # of dicts).
 for inst in instances:
     for varname, value in [
-        ( "server", server ),
-        ( "port", port ),
-        ( "user", user ),
+        ( "server",   server ),
+        ( "port",     port ),
+        ( "user",     user ),
         ( "password", password ),
-        ( "mode", mode ),
-        ( "suburi", suburi ),
+        ( "mode",     mode ),
+        ( "suburi",   suburi ),
         ( "instance", instance )]:
         if varname not in inst:
             inst[varname] = value
@@ -243,6 +277,3 @@ for inst in instances:
     inst["instance"] = inst["instance"].replace(" ", "_")
 
     query_instance(inst)
-
-
-

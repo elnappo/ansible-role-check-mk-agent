@@ -6,7 +6,7 @@
 # |           | |___| | | |  __/ (__|   <    | |  | | . \            |
 # |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
 # |                                                                  |
-# | Copyright Mathias Kettner 2013             mk@mathias-kettner.de |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
 # +------------------------------------------------------------------+
 #
 # This file is part of Check_MK.
@@ -26,11 +26,16 @@
 # This agent uses the program "jarsigner" to read ssl certificate
 # information of jar files and outputs the information to stdout
 # for the Check_MK check.
-# We assume that all files in the jar archive are signed with the 
+# We assume that all files in the jar archive are signed with the
 # same certificate. So we only deal with the last signed file here.
 
 JAVA_HOME=/home/oracle/bin/jdk_latest_version
 JAR_PATH=/home/oracle/fmw/11gR2/as_1/forms/java/*.jar
+
+# Let user override these defaults in a configuration file
+if [ -e $MK_CONFDIR/jar_signature.cfg ] ; then
+    . $MK_CONFDIR/jar_signature.cfg
+fi
 
 PATH=$JAVA_HOME/bin:$PATH
 
@@ -41,7 +46,7 @@ for JAR in $JAR_PATH; do
         OUTPUT=$(jarsigner -verify -verbose -certs "$JAR")
         LINE=$(echo "$OUTPUT" | grep -n ^s | tail -n1 | cut -d: -f1)
         echo "$(echo "$OUTPUT" | tail -n +$LINE)"
-        echo 
+        echo
     fi
 done
 

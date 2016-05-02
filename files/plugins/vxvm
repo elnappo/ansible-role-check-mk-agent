@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -23,16 +23,28 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
+# This plugin has been tested on Linux and HPUX.
 
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
+
+if type vxdmpadm >/dev/null 2>&1; then
+    echo '<<<vxvm_enclosures>>>'
+    vxdmpadm listenclosure all | grep -v -w -e ^[dD]isk -e ^other_disks -e ^ENCLR_NAME -e \^=
+    echo '<<<vxvm_multipath>>>'
+    ENCS=$( vxdmpadm listenclosure all | grep -v -w -e ^[dD]isk -e ENCLR_NAME -e \^= | awk '{print $1}')
+
+    echo "$ENCS" | while read enc ; do
+      vxdmpadm getdmpnode enclosure=$enc | grep -v -e \^= -e NAME
+    done
 fi
 
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
-then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
+if type vxdg >/dev/null 2>&1; then
+   echo '<<<vxvm_objstatus>>>'
+   # Get a list of the in-use disk groups.
+   DGS=$(vxdg list | grep enabled | awk '{print $1}')
+   # Deported or otherwise inactive needs no performance monitoring
+   if [ "X${DGS}" != "X"  ]; then
+     for DG in $DGS ; do
+         vxprint -g $DG -v -q -Q  -F "%type %dgname %name %admin_state %kstate"
+     done
+   fi
 fi

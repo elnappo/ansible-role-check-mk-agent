@@ -5,39 +5,53 @@ Installs check mk agent. Run it with xinit or over ssh (default). Get more infor
 Only testet with Ubuntu and Debian, should run on more platforms.
 
 ## Role Variables
-* `check_mk_agent_deb_package: check-mk-agent_1.2.4p5-2_all.deb`
+* `check_mk_agent_deb_package: check-mk-agent_1.2.6p16-1_all.deb` Path to deb package 
 * `check_mk_agent_over_ssh: True`
-* `check_mk_agent_plugins_requirements: ["smartmontools"]` Requirements for extra plugins
-* `check_mk_agent_plugins: ["smart", ]` List of extra plugins to install
+* `check_mk_agent_plugins_requirements: []` Requirements for extra plugins
+* `check_mk_agent_plugins: []` List of extra plugins to install
 * `check_mk_agent_pubkey_file:` Path to ssh pubkey file 
 
 ## Included check_mk extra plugins
-* apache_status
-* arc_raid_status.sh
-* db2_mem.sh
-* dmi_sysinfo
-* dmraid
-* j4p_performance
-* jar_signature
-* mailman_lists
-* mk_jolokia
-* mk_logwatch
-* mk_mysql
-* mk_oracle
-* mk_oracle_asm
-* mk_postgres
-* mk_sap
-* mk_tsm
-* mk_zypper
+* apache\_status
+* db2\_mem
+* dnsclient
+* hpux\_lunstats
+* hpux\_statgrab
+* jar\_signature
+* kaspersky\_av
+* lnx\_quota
+* mailman\_lists
+* mk\_inventory.aix
+* mk\_inventory.linux
+* mk\_inventory.solaris
+* mk\_jolokia
+* mk\_logins
+* mk\_logwatch
+* mk\_logwatch\_aix
+* mk\_mysql
+* mk\_oracle
+* mk\_oracle.aix
+* mk\_oracle.solaris
+* mk\_oracle\_asm
+* mk\_oracle\_crs
+* mk\_postgres
+* mk\_sap
+* mk\_tsm
+* mk\_zypper
+* netstat.aix
+* netstat.linux
 * nfsexports
-* plesk_backups
-* plesk_domains
-* resolve_hostname
+* nfsexports.solaris
+* nginx\_status
+* plesk\_backups
+* plesk\_domains
+* runas
 * smart
-* sylo
-* vxvm_enclosures
-* vxvm_multipath
-* vxvm_objstatus
+* symantec\_av
+* unitrends\_backup
+* unitrends\_replication
+* vxvm
+* websphere\_mq
 
 ## Dependencies
 None.

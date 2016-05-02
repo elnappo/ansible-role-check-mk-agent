@@ -1,0 +1,62 @@
+#!/bin/sh
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+# plugin for websphere_mq_* checks
+
+if [ "$1" = "" ]
+then
+    su - mqm -c "/usr/lib/check_mk_agent/plugins/websphere_mq run"
+else
+    # Loop over all local mq instances
+    for QM in $( ps -ef  | grep -i '[/]usr/mqm/bin/runmqchl -c' | awk '{ print $NF }' | uniq)
+    do
+         echo '<<<websphere_mq_channels>>>'
+         for i in `echo " display CHANNEL (*) TYPE (SDR) " | /usr/bin/runmqsc $QM | grep CHLTYPE | grep -v SYSTEM | awk '{print $1}'`
+         do
+           j=`echo "display $i " | /usr/bin/runmqsc $QM | grep XMITQ | tr " " "\n" | grep XMITQ | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }'`
+           a=`echo " display qlocal ($j) CURDEPTH " | /usr/bin/runmqsc $QM | grep CURDEPTH | tr " " "\n" | grep CURDEPTH | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }' | tr "\n" " "`
+           c=`echo " display qlocal ($j) MAXDEPTH  " | /usr/bin/runmqsc $QM | grep MAXDEPTH | tr " " "\n" | grep MAXDEPTH | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }' | tr "\n" " "`
+
+           l=`echo $i | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }'`
+           s=`echo " display chstatus($l)" | /usr/bin/runmqsc $QM | grep STATUS | tail -1 | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $NF }'`
+
+           if [ "$s" = "" ]
+           then
+             s="Unknown"
+           fi
+           echo "$a  $i $c $s"
+         done
+         echo '<<<websphere_mq_queues>>>'
+         for t in `echo " display queue (*) where (USAGE EQ NORMAL) " | /usr/bin/runmqsc $QM | grep QLOCAL | grep -v SYSTEM | grep -v _T0 |  grep -v _T1 |  grep -v _T2 | grep -v _T3 | grep -v mqtest | grep QUEUE | awk '{ print $1 }' | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }'`
+         do
+           a=`echo " display queue ($t) CURDEPTH " | /usr/bin/runmqsc $QM | grep CURDEPTH | tail -1 | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }'`
+           b=`echo " display qlocal ($t) MAXDEPTH  " | /usr/bin/runmqsc $QM | grep MAXDEPTH | tr " " "\n" | grep MAXDEPTH | sed '1,$s/(/ /g' | sed '1,$s/)/ /g'| awk '{print $2 }' | tr "\n" " "`
+
+          # Muster: Anzahl eingehender Messages $a auf $t Max-Queues $b
+
+           echo "$a $t $b"
+         done
+     done
+fi

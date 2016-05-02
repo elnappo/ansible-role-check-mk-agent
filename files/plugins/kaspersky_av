@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -23,16 +23,16 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
-
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
-fi
-
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
+if [ -f /opt/kaspersky/kav4fs/bin/kav4fs-control ]
 then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
+   echo "<<<kaspersky_av_updates:sep(58)>>>"
+   /opt/kaspersky/kav4fs/bin/kav4fs-control --get-stat Update
+
+  echo "<<<kaspersky_av_quarantine:sep(58)>>>"
+  /opt/kaspersky/kav4fs/bin/kav4fs-control -Q --get-stat
+
+  echo "<<<kaspersky_av_tasks>>>"
+  /opt/kaspersky/kav4fs/bin/kav4fs-control --get-task-list
+
 fi
+

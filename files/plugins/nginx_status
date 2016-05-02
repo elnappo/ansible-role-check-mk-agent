@@ -24,36 +24,26 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# Check_MK-Agent-Plugin - Apache Server Status
+# Check_MK-Agent-Plugin - Nginx Server Status
 #
-# Fetches the server-status page from detected or configured apache
-# processes to gather status information about this apache process.
+# Fetches the stub nginx_status page from detected or configured nginx
+# processes to gather status information about this process.
 #
-# To make this agent plugin work you have to load the status_module
-# into your apache process. It is also needed to enable the "server-status"
-# handler below the URL "/server-status".
+# Take a look at the check man page for details on how to configure this
+# plugin and check.
 #
-# By default this plugin tries to detect all locally running apache processes
+# By default this plugin tries to detect all locally running processes
 # and to monitor them. If this is not good for your environment you might
-# create an apache_status.cfg file in MK_CONFDIR and populate the servers
+# create an nginx_status.cfg file in MK_CONFDIR and populate the servers
 # list to prevent executing the detection mechanism.
-#
-# It is also possible to override or extend the ssl_ports variable to make the
-# check contact other ports than 443 with HTTPS requests.
 
-import os, sys, urllib2, re, socket
+import os, sys, urllib2, re
+
+# tell urllib2 not to honour "http(s)_proxy" env variables
+urllib2.getproxies = lambda: {}
 
 config_dir = os.getenv("MK_CONFDIR", "/etc/check_mk")
-config_file = config_dir + "/apache_status.conf"
-
-if not os.path.exists(config_file):
-    config_file = config_dir + "/apache_status.cfg"
-
-# We have to deal with socket timeouts. Python > 2.6
-# supports timeout parameter for the urllib2.urlopen method
-# but we are on a python 2.5 system here which seem to use the
-# default socket timeout. We are local here so  set it to 1 second.
-socket.setdefaulttimeout(5.0)
+config_file = config_dir + "/nginx_status.cfg"
 
 # None or list of (proto, ipaddress, port) tuples.
 # proto is 'http' or 'https'
@@ -76,7 +66,7 @@ def try_detect_servers():
         to_replace = re.compile('^.*/')
         proc = to_replace.sub('', proc)
 
-        procs = [ 'apache2', 'httpd', 'httpd2-prefork', 'httpd2-worker', 'httpd.worker', 'fcgi-pm' ]
+        procs = [ 'nginx', 'nginx:' ]
         # the pid/proc field length is limited to 19 chars. Thus in case of
         # long PIDs, the process names are stripped of by that length.
         # Workaround this problem here
@@ -113,23 +103,22 @@ def try_detect_servers():
 if servers is None:
     servers = try_detect_servers()
 
-
 if not servers:
     sys.exit(0)
 
-print '<<<apache_status>>>'
+print '<<<nginx_status>>>'
 for server in servers:
     if isinstance(server, tuple):
         proto, address, port = server
-        page = 'server-status'
+        page = 'nginx_status'
     else:
         proto = server['protocol']
         address = server['address']
         port = server['port']
-        page = server.get('page', 'server-status')
+        page = server.get('page', 'nginx_status')
 
     try:
-        url = '%s://%s:%s/%s?auto' % (proto, address, port, page)
+        url = '%s://%s:%s/%s' % (proto, address, port, page)
         # Try to fetch the status page for each server
         try:
             request = urllib2.Request(url, headers={"Accept" : "text/plain"})
@@ -138,7 +127,7 @@ for server in servers:
             if 'SSL23_GET_SERVER_HELLO:unknown protocol' in str(e):
                 # HACK: workaround misconfigurations where port 443 is used for
                 # serving non ssl secured http
-                url = 'http://%s:%s/server-status?auto' % (address, port)
+                url = 'http://%s:%s/%s' % (address, port, page)
                 fd = urllib2.urlopen(url)
             else:
                 raise

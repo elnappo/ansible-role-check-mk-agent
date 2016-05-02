@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # +------------------------------------------------------------------+
 # |             ____ _               _        __  __ _  __           |
 # |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
@@ -23,16 +23,9 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-# this check will only run if we have a working nfs environment or SHOULD have one.
-# not tested for nfs3
+# This is not part of the standard agent since it can produce much
+# output data of the table is large. This plugin is just needed for
+# checking if certain known TCP connections are established.
 
-# verify if there are exports defined in your local /etc/exports
-if [ -r /etc/exports ]; then
-    EXPORTS=$(grep -v -e ^# -e ^$ /etc/exports)
-fi
-
-if [ "$EXPORTS" ] && pgrep '(portmap|rpcbind)' >/dev/null && pgrep rpc.mountd >/dev/null
-then
-    echo "<<<nfsexports>>>"
-    waitmax 3 showmount --no-headers -e
-fi
+echo '<<<netstat>>>'
+netstat -n -f inet  | fgrep -v '*.*' | egrep '^(tcp|udp)'
