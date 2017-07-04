@@ -1,9 +1,14 @@
 ---
 # tasks file for agent
 - name: Install requierments
-  apt: name=xinit state=present
+  apt: name=xinetd state=present
   when: not check_mk_agent_over_ssh
 
+- name: Enable xinetd on boot
+  service: name=xinetd state=started enabled=yes
+  when: not check_mk_agent_over_ssh
+
+# TODO(elnappo): Make URL changeable
 #- name: Download check_mk agent deb package
 #  get_url: url=https://mathias-kettner.de/download/{{ check_mk_agent_deb_package }} dest=/root/{{ check_mk_agent_deb_package }} validate_certs=no
 
@@ -19,8 +24,8 @@
 
 - name: Install plugin requierments
   apt: name={{ item }} state=present
-  with_items: check_mk_agent_plugins_requirements
+  with_items: "{{ check_mk_agent_plugins_requirements }}"
  
-- name: Transfer plugins
+- name: Copy plugins
   copy: src=plugins/{{ item }} dest=/usr/lib/check_mk_agent/plugins/{{ item }} owner=root group=root mode=0755
-  with_items: check_mk_agent_plugins
+  with_items: "{{ check_mk_agent_plugins }}"

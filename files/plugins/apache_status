@@ -19,7 +19,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -63,9 +63,11 @@ ssl_ports = [ 443, ]
 if os.path.exists(config_file):
     execfile(config_file)
 
+
 def try_detect_servers():
     pids    = []
     results = []
+
     for line in os.popen('netstat -tlnp 2>/dev/null').readlines():
         parts = line.split()
         # Skip lines with wrong format
@@ -91,7 +93,6 @@ def try_detect_servers():
             continue
         pids.append(pid)
 
-        proto = 'http'
         address, port = parts[3].rsplit(':', 1)
         port = int(port)
 
@@ -99,16 +100,21 @@ def try_detect_servers():
         if address == '0.0.0.0':
             address = '127.0.0.1'
         elif address == '::':
-            address = '::1'
+            address = '[::1]'
+        elif ':' in address:
+            address = '[%s]' % address
 
         # Switch protocol if port is SSL port. In case you use SSL on another
         # port you would have to change/extend the ssl_port list
         if port in ssl_ports:
             proto = 'https'
+        else:
+            proto = 'http'
 
         results.append((proto, address, port))
 
     return results
+
 
 if servers is None:
     servers = try_detect_servers()
@@ -117,7 +123,8 @@ if servers is None:
 if not servers:
     sys.exit(0)
 
-print '<<<apache_status>>>'
+
+sys.stdout.write('<<<apache_status>>>\n')
 for server in servers:
     if isinstance(server, tuple):
         proto, address, port = server
@@ -128,17 +135,28 @@ for server in servers:
         port = server['port']
         page = server.get('page', 'server-status')
 
+    portspec = port and ":%d" % port or ""
+
     try:
-        url = '%s://%s:%s/%s?auto' % (proto, address, port, page)
+        url = '%s://%s%s/%s?auto' % (proto, address, portspec, page)
         # Try to fetch the status page for each server
         try:
             request = urllib2.Request(url, headers={"Accept" : "text/plain"})
             fd = urllib2.urlopen(request)
         except urllib2.URLError, e:
-            if 'SSL23_GET_SERVER_HELLO:unknown protocol' in str(e):
+            if 'unknown protocol' in str(e):
                 # HACK: workaround misconfigurations where port 443 is used for
                 # serving non ssl secured http
-                url = 'http://%s:%s/server-status?auto' % (address, port)
+                url = 'http://%s%s/server-status?auto' % (address, portspec)
+                fd = urllib2.urlopen(url)
+            else:
+                raise
+        except Exception, e:
+            if 'doesn\'t match' in str(e):
+                # HACK: workaround if SSL port is found and localhost is using
+                # SSL connections but certificate does not match
+                portspec = ':80'
+                url = 'http://%s%s/server-status?auto' % (address, portspec)
                 fd = urllib2.urlopen(url)
             else:
                 raise
@@ -147,11 +165,15 @@ for server in servers:
             if not line.strip():
                 continue
             if line.lstrip()[0] == '<':
-                # seems to be html output. Skip this server.
+                # Seems to be html output. Skip this server.
                 break
-            print address, port, line
+
+            if ':' in address:
+                sys.stdout.write("%s %s %s\n" % (address.lstrip('[').rstrip(']'), port, line))
+            else:
+                sys.stdout.write("%s %s %s\n" % (address, port, line))
     except urllib2.HTTPError, e:
-        sys.stderr.write('HTTP-Error (%s:%d): %s %s\n' % (address, port, e.code, e))
+        sys.stderr.write('HTTP-Error (%s%s): %s %s\n' % (address, portspec, e.code, e))
 
     except Exception, e:
-        sys.stderr.write('Exception (%s:%d): %s\n' % (address, port, e))
+        sys.stderr.write('Exception (%s%s): %s\n' % (address, portspec, e))

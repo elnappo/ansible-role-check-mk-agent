@@ -18,7 +18,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -52,9 +52,10 @@ then
 
     # Information about distribution
     echo "<<<lnx_distro:sep(124):persist($UNTIL)>>>"
-    for f in /etc/{debian_version,lsb-release,redhat-release,SuSE-release} ; do
+    for f in {/etc/{oracle-release,debian_version,lsb-release,redhat-release,SuSE-release},/usr/share/cma/version} ; do
         if [ -e $f ] ; then
             echo -n "$f|" ; tr \\n \| < $f | sed 's/|$//' ; echo
+            break
         fi
     done
 
@@ -77,8 +78,16 @@ then
         uname -r
     fi
     if type lspci > /dev/null ; then
-        echo "<<<lnx_vga:sep(58):persist($UNTIL)>>>"
+        echo "<<<lnx_video:sep(58):persist($UNTIL)>>>"
         lspci  -v -s  $(lspci | grep VGA | cut -d" " -f 1)
+    fi
+
+    # Some networking information
+    if type ip > /dev/null ; then
+        echo "<<<lnx_ip_a:persist($UNTIL)>>>"
+        ip a
+        echo "<<<lnx_ip_r:persist($UNTIL)>>>"
+        ip r
     fi
 
 fi

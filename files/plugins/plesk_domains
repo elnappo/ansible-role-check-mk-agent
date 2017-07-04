@@ -19,7 +19,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -29,6 +29,7 @@
 # <<<plesk_domains>>>
 # <domain>
 
+import sys
 import MySQLdb
 
 try:
@@ -39,12 +40,12 @@ try:
         passwd  = file('/etc/psa/.psa.shadow').read().strip(),
         charset = 'utf8',
     )
-except MySQLdb.Error, e:
+except MySQLdb.Error, e: # pylint: disable=no-member
     sys.stderr.write("MySQL-Error %d: %s\n" % (e.args[0], e.args[1]))
     sys.exit(1)
 
 cursor = db.cursor()
 cursor.execute('SELECT name FROM domains')
-print '<<<plesk_domains>>>'
-print '\n'.join([ d[0] for d in cursor.fetchall() ])
+sys.stdout.write('<<<plesk_domains>>>\n')
+sys.stdout.write("%s\n" % '\n'.join([ d[0] for d in cursor.fetchall() ]))
 cursor.close()

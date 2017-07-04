@@ -9,10 +9,12 @@ galaxy_info:
     versions:
     - precise
     - trusty
+    - xenial
   - name: Debian
     versions:
     - wheezy
     - jessie
+    - stretch
   categories:
   - monitoring
 

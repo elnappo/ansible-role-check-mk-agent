@@ -18,7 +18,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -28,7 +28,11 @@
 INTERVAL=14400
 
 FLAGFILE=$MK_VARDIR/mk_inventory.last.$REMOTE
-NOW=$(truss /usr/bin/date 2>&1 | grep ^time | awk -F"= " '{print $2}')
+if [ `uname -r` = "5.10" ]; then
+    NOW=$(truss /usr/bin/date 2>&1 | grep ^time | awk -F"= " '{print $2}')
+else
+    NOW=`date +%s`
+fi
 UNTIL=$((NOW + INTERVAL + 600))
 
 #check if flagfile exits
@@ -46,10 +50,23 @@ then
     echo "<<<solaris_uname:sep(61):persist($UNTIL)>>>"
     uname -X
 
-    if type prtdiag > /dev/null; then
-        echo "<<<solaris_prtdiag:sep(10):persist($UNTIL)>>>"
-        serial=`sneep -t serial`;echo "SerialNumber: $serial"
-        prtdiag -v
+    if zoneadm list | grep global >/dev/null 2>&1
+    then
+        if type prtdiag > /dev/null; then
+            echo "<<<solaris_prtdiag:sep(10):persist($UNTIL)>>>"
+            if type sneep >/dev/null 2>&1; then
+                SN=$(sneep -t serial)
+            else
+                SN=$(smbios -t SMB_TYPE_SYSTEM | grep 'Serial Number:' | awk '{print substr($0, index($0,$3))}')
+            fi
+            echo "SerialNumber: $SN"
+            prtdiag -v
+        fi
+
+        if type prtpicl > /dev/null; then
+            echo "<<<solaris_prtpicl:persist($UNTIL)>>>"
+            prtpicl -v
+        fi
     fi
 
     if type psrinfo > /dev/null; then
@@ -57,15 +74,16 @@ then
         psrinfo -p -v
     fi
 
-    if type prtpicl > /dev/null; then
-        echo "<<<solaris_prtpicl:persist($UNTIL)>>>"
-        prtpicl -v
-    fi
-
-
     if type pkginfo >/dev/null ; then
         echo "<<<solaris_pkginfo:sep(58):persist($UNTIL)>>>"
         pkginfo -l
     fi
+
+    echo "<<<solaris_addresses:persist($UNTIL)>>>"
+    ifconfig -a
+
+    echo "<<<solaris_routes:persist($UNTIL)>>>"
+    netstat -nr
+
 fi
 

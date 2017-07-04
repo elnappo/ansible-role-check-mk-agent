@@ -19,7 +19,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -54,13 +54,33 @@ if logwatch_dir:
     mk_vardir = logwatch_dir
 else:
     mk_confdir = os.getenv("MK_CONFDIR") or "."
-    mk_vardir = os.getenv("MK_VARDIR") or "."
+    mk_vardir = os.getenv("MK_VARDIR") or os.getenv("MK_STATEDIR") or "."
 
-print "<<<logwatch>>>"
+
+sys.stdout.write("<<<logwatch>>>\n")
 
 config_filename = mk_confdir + "/logwatch.cfg"
 config_dir      = mk_confdir + "/logwatch.d/*.cfg"
-status_filename = mk_vardir + "/logwatch.state"
+
+
+# Determine the name of the state file
+# $REMOTE set                   -> logwatch.state.$REMOTE
+# $REMOTE not set and a tty     -> logwatch.state.local
+# $REMOTE not set and not a tty -> logwatch.state
+remote_hostname = os.getenv("REMOTE", "")
+remote_hostname = remote_hostname.replace(":", "_")
+if remote_hostname != "":
+    status_filename = "%s/logwatch.state.%s" % (mk_vardir, remote_hostname)
+else:
+    if sys.stdout.isatty():
+        status_filename = "%s/logwatch.state.local" % mk_vardir
+    else:
+        status_filename = "%s/logwatch.state" % mk_vardir
+
+# Copy the last known state from the logwatch.state when there is no status_filename yet.
+if not os.path.exists(status_filename) and os.path.exists("%s/logwatch.state" % mk_vardir):
+    import shutil
+    shutil.copy("%s/logwatch.state" % mk_vardir, status_filename)
 
 def is_not_comment(line):
     if line.lstrip().startswith('#') or \
@@ -71,13 +91,15 @@ def is_not_comment(line):
 def parse_filenames(line):
     return line.split()
 
-def parse_pattern(level, pattern):
+def parse_pattern(level, pattern, line):
     if level not in [ 'C', 'W', 'I', 'O' ]:
-        raise(Exception("Invalid pattern line '%s'" % line))
+        raise Exception("Invalid pattern line '%s'" % line)
+
     try:
         compiled = re.compile(pattern)
     except:
-        raise(Exception("Invalid regular expression in line '%s'" % line))
+        raise Exception("Invalid regular expression in line '%s'" % line)
+
     return (level, compiled)
 
 def read_config():
@@ -90,20 +112,24 @@ def read_config():
     config = []
 
     for line in config_lines:
-        rewrite = False
         if line[0].isspace(): # pattern line
             if not have_filenames:
                 raise Exception("Missing logfile names")
+
             level, pattern = line.split(None, 1)
+            cont_list = [] # List of continuation patterns
+            rewrite_list = [] # List of rewrite patterns
+
             if level == 'A':
                 cont_list.append(parse_cont_pattern(pattern))
             elif level == 'R':
                 rewrite_list.append(pattern)
             else:
-                level, compiled = parse_pattern(level, pattern)
-                cont_list = [] # List of continuation patterns
-                rewrite_list = [] # List of rewrite patterns
+                level, compiled = parse_pattern(level, pattern, line)
+                cont_list = []
+                rewrite_list = []
                 patterns.append((level, compiled, cont_list, rewrite_list))
+
         else: # filename line
             patterns = []
             config.append((parse_filenames(line), patterns))
@@ -165,6 +191,12 @@ def next_line(file_handle):
     else:
         try:
             line = file_handle.next()
+            # Avoid parsing of (yet) incomplete lines (when acutal application
+            # is just in the process of writing)
+            if not line.endswith(os.linesep):
+                begin_of_line_offset = file_handle.tell() - len(line)
+                os.lseek(file_handle.fileno(), begin_of_line_offset, 0)
+                return None
             return line
         except:
             return None
@@ -183,10 +215,10 @@ def process_logfile(logfile, patterns):
     except:
         if debug:
             raise
-        print "[[[%s:cannotopen]]]" % logfile
+        sys.stdout.write("[[[%s:cannotopen]]]\n" % logfile)
         return
 
-    print "[[[%s]]]" % logfile
+    sys.stdout.write("[[[%s]]]\n" % logfile)
 
     # Seek to the current end in order to determine file size
     current_end = os.lseek(file_desc, 0, 2) # os.SEEK_END not available in Python 2.4
@@ -268,7 +300,7 @@ def process_logfile(logfile, patterns):
                 # Check for continuation lines
                 for cont_pattern in cont_patterns:
                     if type(cont_pattern) == int: # add that many lines
-                        for x in range(cont_pattern):
+                        for _unused_x in range(cont_pattern):
                             cont_line = next_line(file_handle)
                             if cont_line == None: # end of file
                                 break
@@ -311,8 +343,9 @@ def process_logfile(logfile, patterns):
         sys.stdout.flush()
 
     # Handle option maxfilesize, regardless of warning or errors that have happened
-    if opt_maxfilesize != None and offset <= opt_maxfilesize and new_offset > opt_maxfilesize:
-        sys.stdout.write("%sW Maximum allowed logfile size (%d bytes) exceeded.%s\n" % (tty_yellow, opt_maxfilesize, tty_normal))
+    if opt_maxfilesize != None and (offset / opt_maxfilesize) < (new_offset / opt_maxfilesize):
+        sys.stdout.write("%sW Maximum allowed logfile size (%d bytes) exceeded for the %dth time.%s\n" %
+                  (tty_yellow, opt_maxfilesize, new_offset / opt_maxfilesize, tty_normal))
 
 
 try:
@@ -320,11 +353,11 @@ try:
 except Exception, e:
     if debug:
         raise
-    print "CANNOT READ CONFIG FILE: %s" % e
+    sys.stdout.write("CANNOT READ CONFIG FILE: %s\n" % e)
     sys.exit(1)
 
 # Simply ignore errors in the status file.  In case of a corrupted status file we simply begin
-# with an empty status. That keeps the monitoring up and running - even if we might loose a
+# with an empty status. That keeps the monitoring up and running - even if we might lose a
 # message in the extreme case of a corrupted status file.
 try:
     status = read_status()
@@ -332,6 +365,7 @@ except Exception, e:
     status = {}
 
 
+logfile_patterns = {}
 # The filename line may contain options like 'maxlines=100' or 'maxtime=10'
 for filenames, patterns in config:
     # Initialize options with default values
@@ -370,7 +404,7 @@ for filenames, patterns in config:
     except Exception, e:
         if debug:
             raise
-        print "INVALID CONFIGURATION: %s" % e
+        sys.stdout.write("INVALID CONFIGURATION: %s\n" % e)
         sys.exit(1)
 
 
@@ -381,10 +415,13 @@ for filenames, patterns in config:
         if opt_regex:
             logfiles = [ f for f in logfiles if opt_regex.search(f) ]
         if len(logfiles) == 0:
-            print '[[[%s:missing]]]' % glob_pattern
+            sys.stdout.write('[[[%s:missing]]]\n' % glob_pattern)
         else:
             for logfile in logfiles:
-                process_logfile(logfile, patterns)
+                logfile_patterns[logfile] = logfile_patterns.get(logfile, []) + patterns
+
+for logfile, patterns in logfile_patterns.items():
+    process_logfile(logfile, patterns)
 
 if not debug:
     save_status(status)

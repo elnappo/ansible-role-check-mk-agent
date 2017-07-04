@@ -18,7 +18,7 @@
 # in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
 # out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
 # PARTICULAR PURPOSE. See the  GNU General Public License for more de-
-# ails.  You should have  received  a copy of the  GNU  General Public
+# tails. You should have  received  a copy of the  GNU  General Public
 # License along with GNU Make; see the file  COPYING.  If  not,  write
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
@@ -32,7 +32,12 @@
 megaraid_info()
 {
 
-    PDINFO=$(MegaCli -PDlist -a0)
+    #PDINFO=$(MegaCli -PDlist -a0)
+    if [ -z "$1" ]; then
+		PDINFO=$(megacli -PDlist -a0 -NoLog)
+    else
+		PDINFO=$($1 -PDlist -a0 -NoLog)
+    fi
 
     echo "$PDINFO" | \
     while read line ; do
@@ -88,6 +93,8 @@ if which smartctl > /dev/null 2>&1 ; then
 	    serial=AMCC_${serial}00000000000
 	    echo "$serial=$twaminor"
         done`
+    else:
+        echo "tw_cli not found" >&2
     fi
 
     echo '<<<smart>>>'
@@ -154,8 +161,20 @@ if which smartctl > /dev/null 2>&1 ; then
 
 
     # Call MegaRaid submodule if conditions are met
-    if which MegaCli > /dev/null && [ -c /dev/sg0 ] ; then
-        megaraid_info
+    if type MegaCli >/dev/null 2>&1; then
+        MegaCli_bin="MegaCli"
+    elif type MegaCli64 >/dev/null 2>&1; then
+        MegaCli_bin="MegaCli64"
+    elif type megacli >/dev/null 2>&1; then
+        MegaCli_bin="megacli"
+    else
+        MegaCli_bin="unknown"
     fi
+
+    if [ "$MegaCli_bin" != "unknown" ]; then
+        megaraid_info "$MegaCli_bin"
+    fi
+else
+    echo "ERROR: smartctl not found" >&2
 fi
 
