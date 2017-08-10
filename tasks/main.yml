@@ -31,9 +31,9 @@
   when: ansible_os_family == "Debian" 
 
 - block:
-  - name: Install check_mk_agent
+  - name: Install check-mk-agent
     yum: 
-     name: check_mk_agent
+     name: check-mk-agent
      state: latest
 
   - name: Install check_mk_agent plugin requierments
@@ -57,7 +57,6 @@
       system: yes
       home: /usr/lib/check_mk_agent/local
       createhome: no
-      shell: /sbin/nologin
       state: present
 
   - name: Allow checkmk_agent user to run /usr/bin/check_mk_agent with sudo
