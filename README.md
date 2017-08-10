@@ -1,8 +1,15 @@
 # ansible-role-check-mk-agent [![Build Status](https://travis-ci.org/elnappo/ansible-role-check-mk-agent.svg?branch=master)](https://travis-ci.org/elnappo/ansible-role-check-mk-agent)
-Installs check mk\_agent. Run it with xinetd or over SSH (default). Get more informations about check\_mk at [https://mathias-kettner.de/check_mk.html]()
+Installs check mk\_agent. Run it with xinetd, SSH with sudo or SSH as root (default). Get more information about check\_mk at [https://mathias-kettner.de/check_mk.html]()
+
+## Features
+* Install check_mk agent from repository or file (partly implemented)
+* Query check_mk agent over xinetd, SSH as root or SSH with sudo
+* Add SSH host key to check_mk server
+* Install check_mk agent plugins and their dependencies
+* Add hosts to check_mk server via WATO API (todo)
 
 ## Requirements
-Only testet with Ubuntu 14.04 and 16.04, should run on more platforms.
+Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat (Solaris support is planed).
 
 ## Install
     $ ansible-galaxy install elnappoo.check-mk-agent
@@ -10,8 +17,10 @@ Only testet with Ubuntu 14.04 and 16.04, should run on more platforms.
 ## Role Variables
 * `check_mk_agent_deb_package: check-mk-agent_1.4.0p7-1_all.deb` Path to deb package
 * `check_mk_agent_over_ssh: True`
-* `check_mk_agent_with_sudo: False`
-* `check_mk_agent_add_host_pubkey: False`
+* `check_mk_agent_with_sudo: False` Adds a user which is allowed to run check_mk_agent with sudo
+* `check_mk_agent_add_host_pubkey: False` Import SSH host keys into your check_mk servers known_hosts file
+* `check_mk_monitoring_host:` Hostname of your check_mk server
+* `check_mk_monitoring_user:` Username under which your check_mk instance runs
 * `check_mk_agent_plugins_requirements_apt: []` Requirements for extra plugins (apt)
 * `check_mk_agent_plugins_requirements_yum: []` Requirements for extra plugins (yum)
 * `check_mk_agent_plugins: []` List of extra plugins to install
@@ -66,9 +75,13 @@ None.
 
 ```yaml
 - hosts: servers
-  remote_user: root
+  vars:
+    check_mk_agent_pubkey_file: omd_rsa.pub
+    check_mk_agent_add_host_pubkey: True
+    check_mk_monitoring_host: checkmk.example.com
+    check_mk_monitoring_user: monitoring 
   roles:
-     - { role: elnappoo.check-mk-agent, check_mk_agent_pubkey_file: omd_rsa.pub }
+     - elnappoo.check-mk-agent
 ```
 
 ## License
@@ -78,4 +91,3 @@ MIT
 ## Author Information
 
 elnappo <elnappo@nerdpol.io>
-
