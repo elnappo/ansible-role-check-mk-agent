@@ -1,5 +1,5 @@
 # ansible-role-check-mk-agent [![Build Status](https://travis-ci.org/elnappo/ansible-role-check-mk-agent.svg?branch=master)](https://travis-ci.org/elnappo/ansible-role-check-mk-agent)
-Installs check mk\_agent. Run it with xinetd or over SSH (default). Get more informations about check\_mk at [https://mathias-kettner.de/check_mk.html]()
+Installs check mk\_agent. Run it with xinetd or over SSH (default). Get more information about check\_mk at [https://mathias-kettner.de/check_mk.html]()
 
 ## Requirements
 Only testet with Ubuntu 14.04 and 16.04, should run on more platforms.

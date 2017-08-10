@@ -1,6 +1,6 @@
 ---
 # tasks file for agent
-- name: Install requierments
+- name: Install requirements
   apt: name=xinetd state=present
   when: not check_mk_agent_over_ssh
 
@@ -22,7 +22,7 @@
   authorized_key: user=root key_options='command="/usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc' key="{{ lookup('file', check_mk_agent_pubkey_file) }}"
   when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file
 
-- name: Install plugin requierments
+- name: Install plugin requirements
   apt: name={{ item }} state=present
   with_items: "{{ check_mk_agent_plugins_requirements }}"
  
