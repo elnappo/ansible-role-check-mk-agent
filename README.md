@@ -10,7 +10,10 @@ Only testet with Ubuntu 14.04 and 16.04, should run on more platforms.
 ## Role Variables
 * `check_mk_agent_deb_package: check-mk-agent_1.4.0p7-1_all.deb` Path to deb package
 * `check_mk_agent_over_ssh: True`
-* `check_mk_agent_plugins_requirements: []` Requirements for extra plugins
+* `check_mk_agent_with_sudo: False`
+* `check_mk_agent_add_host_pubkey: False`
+* `check_mk_agent_plugins_requirements_apt: []` Requirements for extra plugins (apt)
+* `check_mk_agent_plugins_requirements_yum: []` Requirements for extra plugins (yum)
 * `check_mk_agent_plugins: []` List of extra plugins to install
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
 

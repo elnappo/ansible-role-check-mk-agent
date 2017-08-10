@@ -1,0 +1,1 @@
+checkmk_agent ALL = (root) NOPASSWD: /usr/bin/check_mk_agent

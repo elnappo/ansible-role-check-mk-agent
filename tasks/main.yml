@@ -1,31 +1,103 @@
 ---
-# tasks file for agent
-- name: Install requierments
-  apt: name=xinetd state=present
+# tasks file for check_mk agent
+- name: Install xinetd
+  package: 
+    name: xinetd
+    state: latest
   when: not check_mk_agent_over_ssh
 
-- name: Enable xinetd on boot
-  service: name=xinetd state=started enabled=yes
+- name: Start and enable xinetd on boot
+  service:
+    name: xinetd
+    state: started
+    enabled: yes
   when: not check_mk_agent_over_ssh
 
-# TODO(elnappo): Make URL changeable
-#- name: Download check_mk agent deb package
-#  get_url: url=https://mathias-kettner.de/download/{{ check_mk_agent_deb_package }} dest=/root/{{ check_mk_agent_deb_package }} validate_certs=no
+- block:
+  - name: Copy check_mk_agent deb package
+    copy: 
+      src: "{{ check_mk_agent_deb_package }}"
+      dest: /root/check_mk_agent.deb
 
-- name: Copy check_mk agent deb package
-  copy: src={{ check_mk_agent_deb_package }} dest=/root/check_mk_agent.deb
+  - name: Install check_mk_agent deb package
+    apt: 
+      deb: /root/check_mk_agent.deb
 
-- name: Install deb package
-  apt: deb=/root/check_mk_agent.deb
+  - name: Install plugin requierments
+    apt:
+      name: "{{ item }}" 
+      state: latest
+    with_items: "{{ check_mk_agent_plugins_requirements_apt }}"
+  when: ansible_os_family == "Debian" 
+
+- block:
+  - name: Install check_mk_agent
+    yum: 
+     name: check_mk_agent
+     state: latest
+
+  - name: Install check_mk_agent plugin requierments
+    yum: 
+      name: "{{ item }}"
+      state: latest
+    with_items: "{{ check_mk_agent_plugins_requirements_yum }}"
+  when: ansible_os_family == "RedHat" 
 
 - name: Setup SSH key
-  authorized_key: user=root key_options='command="/usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc' key="{{ lookup('file', check_mk_agent_pubkey_file) }}"
-  when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file
+  authorized_key:
+    user: root 
+    key_options: 'command="/usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
+    key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
+  when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file and not check_mk_agent_with_sudo
 
-- name: Install plugin requierments
-  apt: name={{ item }} state=present
-  with_items: "{{ check_mk_agent_plugins_requirements }}"
- 
+- block:
+  - name: Add check_mk user for use with sudo
+    user:
+      name: checkmk_agent
+      system: yes
+      home: /usr/lib/check_mk_agent/local
+      createhome: no
+      shell: /sbin/nologin
+      state: present
+
+  - name: Allow checkmk_agent user to run /usr/bin/check_mk_agent with sudo
+    copy:
+      src: sudoers_check_mk_agent
+      dest: /etc/sudoers.d/check_mk_agent
+
+  - name: Setup SSH key with sudo
+    authorized_key: 
+      user: checkmk_agent
+      key_options: 'command="sudo /usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
+      key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
+
+  when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file and check_mk_agent_with_sudo
+
+- block:
+  - name: Scan SSH host pubkey
+    shell: ssh-keyscan -T 10 {{ inventory_hostname }}
+    changed_when: False
+    register: check_mk_agent_host_ssh_pubkey
+  
+  - debug: var=check_mk_agent_host_ssh_pubkey.stdout_lines
+
+  - name: Add known_host entry to monitoring instance
+    known_hosts:
+      name: "{{ inventory_hostname }}"
+      key: "{{ item }}"
+      state: present
+    with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
+
+  when: check_mk_agent_add_host_pubkey
+  delegate_to: "{{ check_mk_monitoring_host }}"
+  become_user: "{{ check_mk_monitoring_user }}"
+  become: yes
+
 - name: Copy plugins
-  copy: src=plugins/{{ item }} dest=/usr/lib/check_mk_agent/plugins/{{ item }} owner=root group=root mode=0755
+  copy:
+    src: plugins/{{ item }} 
+    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
+    owner: root 
+    group: root
+    mode: 0755
   with_items: "{{ check_mk_agent_plugins }}"
