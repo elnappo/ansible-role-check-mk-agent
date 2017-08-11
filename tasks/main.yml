@@ -1,28 +1,6 @@
 ---
 # tasks file for check_mk agent
 - block:
-  - name: Start and enable check_mk.socket (use systemd-socket)
-    service: 
-      name: check_mk.socket
-      state: started
-      enabled: yes
-
-  - name: Allow check_mk.socket (ufw)
-    ufw: rule=allow port=6656 proto=tcp
-    when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
-
-  - name: Allow check_mk.socket (firewalld)
-    firewalld:
-      port: 6556/tcp
-      zone: public
-      permanent: true
-      state: enabled
-    when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
-    notify:
-      - Restart firewalld
-  when: not check_mk_agent_over_ssh
-
-- block:
   - name: Copy check_mk_agent deb package
     copy: 
       src: "{{ check_mk_agent_deb_package }}"
@@ -51,6 +29,37 @@
       state: latest
     with_items: "{{ check_mk_agent_plugins_requirements_yum }}"
   when: ansible_os_family == "RedHat" 
+
+- block:
+  - name: Start and enable check_mk.socket (use systemd-socket)
+    service: 
+      name: check_mk.socket
+      state: started
+      enabled: yes
+
+  - name: Allow check_mk.socket (ufw)
+    ufw: rule=allow port=6656 proto=tcp
+    when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
+
+  - name: Allow check_mk.socket (firewalld)
+    firewalld:
+      port: 6556/tcp
+      zone: public
+      permanent: true
+      state: enabled
+    when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
+    notify:
+      - Restart firewalld
+  when: not check_mk_agent_over_ssh
+
+- name: Copy plugins
+  copy:
+    src: plugins/{{ item }} 
+    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
+    owner: root 
+    group: root
+    mode: 0755
+  with_items: "{{ check_mk_agent_plugins }}"
 
 - name: Setup SSH key
   authorized_key:
@@ -107,6 +116,7 @@
     hostname: "{{ inventory_hostname }}"
     folder: "{{ check_mk_monitoring_host_folder }}"
     state: present
+  when: check_mk_agent_add_to_wato
   register: check_mk_add_host_wato
   delegate_to: localhost
 
@@ -121,12 +131,3 @@
   notify:
     - Check_mk activate changes via WATO API
   delegate_to: localhost
-
-- name: Copy plugins
-  copy:
-    src: plugins/{{ item }} 
-    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
-    owner: root 
-    group: root
-    mode: 0755
-  with_items: "{{ check_mk_agent_plugins }}"

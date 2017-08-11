@@ -25,6 +25,7 @@ Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian an
 * `check_mk_agent_plugins_requirements_yum: []` Requirements for extra plugins (yum)
 * `check_mk_agent_plugins: []` List of extra plugins to install
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
+* `check_mk_agent_add_to_wato: False`
 * `check_mk_monitoring_host_folder: ""`
 * `check_mk_monitoring_host_discovery_mode: new`
 * `check_mk_monitoring_host_url:`
