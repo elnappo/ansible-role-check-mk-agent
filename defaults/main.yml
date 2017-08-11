@@ -4,8 +4,7 @@ check_mk_agent_deb_package: check-mk-agent_1.4.0p9-1_all.deb
 check_mk_agent_over_ssh: True
 check_mk_agent_with_sudo: False
 check_mk_agent_add_host_pubkey: False
-check_mk_agent_plugins_requirements_apt: []
-check_mk_agent_plugins_requirements_yum: []
+check_mk_agent_plugins_requirements: []
 check_mk_agent_plugins: []
 check_mk_agent_pubkey_file:
 check_mk_agent_add_to_wato: False

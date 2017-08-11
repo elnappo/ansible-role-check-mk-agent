@@ -2,7 +2,7 @@
 Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as root (default). Get more information about check\_mk at [https://mathias-kettner.de/check_mk.html]()
 
 ## Features
-* Install check_mk agent from repository or file (partly implemented)
+* Install check_mk agent
 * Query check_mk agent over systemd-socket, SSH as root or SSH with sudo
 * Add SSH host key to check_mk server
 * Install check_mk agent plugins and their dependencies
@@ -87,6 +87,7 @@ None.
     check_mk_agent_add_host_pubkey: True
     check_mk_monitoring_host: checkmk.example.com
     check_mk_monitoring_user: monitoring
+    check_mk_agent_add_to_wato: True
     check_mk_monitoring_host_url: http://cmk.example.com/monitoring/
     check_mk_monitoring_host_username: ansible
     check_mk_monitoring_host_secret: 7JTuBt6nETYHG1GS

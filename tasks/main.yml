@@ -1,34 +1,24 @@
 ---
 # tasks file for check_mk agent
-- block:
-  - name: Copy check_mk_agent deb package
-    copy: 
-      src: "{{ check_mk_agent_deb_package }}"
-      dest: /root/check_mk_agent.deb
+- name: Install check_mk_agent
+  package:
+    name: check-mk-agent
+    state: latest
 
-  - name: Install check_mk_agent deb package
-    apt: 
-      deb: /root/check_mk_agent.deb
+- name: Install plugin requirements
+  package:
+    name: "{{ item }}" 
+    state: latest
+  with_items: "{{ check_mk_agent_plugins_requirements }}"
 
-  - name: Install plugin requirements
-    apt:
-      name: "{{ item }}" 
-      state: latest
-    with_items: "{{ check_mk_agent_plugins_requirements_apt }}"
-  when: ansible_os_family == "Debian" 
-
-- block:
-  - name: Install check-mk-agent
-    yum: 
-     name: check-mk-agent
-     state: latest
-
-  - name: Install check_mk_agent plugin requirements
-    yum: 
-      name: "{{ item }}"
-      state: latest
-    with_items: "{{ check_mk_agent_plugins_requirements_yum }}"
-  when: ansible_os_family == "RedHat" 
+- name: Copy plugins
+  copy:
+    src: plugins/{{ item }} 
+    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
+    owner: root 
+    group: root
+    mode: 0755
+  with_items: "{{ check_mk_agent_plugins }}"
 
 - block:
   - name: Start and enable check_mk.socket (use systemd-socket)
@@ -51,15 +41,6 @@
     notify:
       - Restart firewalld
   when: not check_mk_agent_over_ssh
-
-- name: Copy plugins
-  copy:
-    src: plugins/{{ item }} 
-    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
-    owner: root 
-    group: root
-    mode: 0755
-  with_items: "{{ check_mk_agent_plugins }}"
 
 - name: Setup SSH key
   authorized_key:
