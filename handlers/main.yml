@@ -4,3 +4,11 @@
   service:
     name: firewalld
     state: restarted
+
+- name: Check_mk activate changes via WATO API
+  check_mk:
+    server_url: "{{ check_mk_monitoring_host_url }}"
+    username: "{{ check_mk_monitoring_host_username }}"
+    secret: "{{ check_mk_monitoring_host_secret }}"
+    activate_changes: yes
+  delegate_to: localhost

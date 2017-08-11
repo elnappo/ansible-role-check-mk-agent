@@ -99,6 +99,29 @@
   become_user: "{{ check_mk_monitoring_user }}"
   become: yes
 
+- name: Add host to check_mk instance via WATO API
+  check_mk:
+    server_url: "{{ check_mk_monitoring_host_url }}"
+    username: "{{ check_mk_monitoring_host_username }}"
+    secret: "{{ check_mk_monitoring_host_secret }}"
+    hostname: "{{ inventory_hostname }}"
+    folder: "{{ check_mk_monitoring_host_folder }}"
+    state: present
+  register: check_mk_add_host_wato
+  delegate_to: localhost
+
+- name: Discover services via WATO API
+  check_mk:
+    server_url: "{{ check_mk_monitoring_host_url }}"
+    username: "{{ check_mk_monitoring_host_username }}"
+    secret: "{{ check_mk_monitoring_host_secret }}"
+    hostname: "{{ inventory_hostname }}"
+    discover_services: "{{ check_mk_monitoring_host_discovery_mode}}"
+  when: check_mk_add_host_wato.changed
+  notify:
+    - Check_mk activate changes via WATO API
+  delegate_to: localhost
+
 - name: Copy plugins
   copy:
     src: plugins/{{ item }} 

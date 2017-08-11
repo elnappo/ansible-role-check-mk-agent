@@ -6,7 +6,7 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 * Query check_mk agent over systemd-socket, SSH as root or SSH with sudo
 * Add SSH host key to check_mk server
 * Install check_mk agent plugins and their dependencies
-* Add hosts to check_mk server via WATO API (todo)
+* Add hosts to check_mk server via WATO API
 
 ## Requirements
 Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat (Solaris support is planed).
@@ -25,6 +25,11 @@ Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian an
 * `check_mk_agent_plugins_requirements_yum: []` Requirements for extra plugins (yum)
 * `check_mk_agent_plugins: []` List of extra plugins to install
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
+* `check_mk_monitoring_host_folder: ""`
+* `check_mk_monitoring_host_discovery_mode: new`
+* `check_mk_monitoring_host_url:`
+* `check_mk_monitoring_host_username:`
+* `check_mk_monitoring_host_secret:`
 * `check_mk_agent_setup_firewall: True` Add firewall rule (ufw/firewalld) when using systemd-socket
 
 ## Included check_mk extra plugins
@@ -80,7 +85,10 @@ None.
     check_mk_agent_pubkey_file: omd_rsa.pub
     check_mk_agent_add_host_pubkey: True
     check_mk_monitoring_host: checkmk.example.com
-    check_mk_monitoring_user: monitoring 
+    check_mk_monitoring_user: monitoring
+    check_mk_monitoring_host_url: http://cmk.example.com/monitoring/
+    check_mk_monitoring_host_username: ansible
+    check_mk_monitoring_host_secret: 7JTuBt6nETYHG1GS
   roles:
      - elnappoo.check-mk-agent
 ```
