@@ -1,16 +1,25 @@
 ---
 # tasks file for check_mk agent
-- name: Install xinetd
-  package: 
-    name: xinetd
-    state: latest
-  when: not check_mk_agent_over_ssh
+- block:
+  - name: Start and enable check_mk.socket (use systemd-socket)
+    service: 
+      name: check_mk.socket
+      state: started
+      enabled: yes
 
-- name: Start and enable xinetd on boot
-  service:
-    name: xinetd
-    state: started
-    enabled: yes
+  - name: Allow check_mk.socket (ufw)
+    ufw: rule=allow port=6656 proto=tcp
+    when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
+
+  - name: Allow check_mk.socket (firewalld)
+    firewalld:
+      port: 6556/tcp
+      zone: public
+      permanent: true
+      state: enabled
+    when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
+    notify:
+      - Restart firewalld
   when: not check_mk_agent_over_ssh
 
 - block:
