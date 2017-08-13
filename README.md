@@ -4,6 +4,7 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 ## Features
 * Install check_mk agent
 * Query check_mk agent over systemd-socket, SSH as root or SSH with sudo
+* Setup firewall if systemd-socket ist used (ufw or firewalld)
 * Add SSH host key to check_mk server
 * Install check_mk agent plugins and their dependencies
 * Add hosts to check_mk server via WATO API
