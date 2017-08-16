@@ -20,6 +20,24 @@
     mode: 0755
   with_items: "{{ check_mk_agent_plugins }}"
 
+- name: Create cache time directories
+  file:
+    name: /usr/lib/check_mk_agent/local/{{ item.value.cache_time }}
+    state: directory
+    owner: root 
+    group: root
+    mode: 0755    
+  with_dict: "{{ check_mk_agent_local_checks }}"
+
+- name: Copy local checks
+  copy:
+    src: "{{ item.value.src }}"
+    dest: /usr/lib/check_mk_agent/local/{{ item.value.cache_time | default(omit) }}/{{ item.key }}
+    owner: root 
+    group: root
+    mode: 0755
+  with_dict: "{{ check_mk_agent_local_checks }}"
+
 - block:
   - name: Start and enable check_mk.socket (use systemd-socket)
     service: 

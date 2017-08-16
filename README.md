@@ -5,7 +5,7 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 * Install check_mk agent
 * Query check_mk agent over systemd-socket, SSH as root or SSH with sudo
 * Add SSH host key to check_mk server
-* Install check_mk agent plugins and their dependencies
+* Install check_mk agent plugins/local checks and their dependencies
 * Add hosts to check_mk server via WATO API
 
 ## Requirements
@@ -15,22 +15,21 @@ Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian an
     $ ansible-galaxy install elnappoo.check-mk-agent
 
 ## Role Variables
-* `check_mk_agent_deb_package: check-mk-agent_1.4.0p9-1_all.deb` Path to deb package
 * `check_mk_agent_over_ssh: True`
 * `check_mk_agent_with_sudo: False` Adds a user which is allowed to run check_mk_agent with sudo
 * `check_mk_agent_add_host_pubkey: False` Import SSH host keys into your check_mk servers known_hosts file
-* `check_mk_monitoring_host:` Hostname of your check_mk server
-* `check_mk_monitoring_user:` Username under which your check_mk instance runs
-* `check_mk_agent_plugins_requirements_apt: []` Requirements for extra plugins (apt)
-* `check_mk_agent_plugins_requirements_yum: []` Requirements for extra plugins (yum)
+* `check_mk_agent_monitoring_host:` Hostname of your check_mk server
+* `check_mk_agent_monitoring_user:` Username under which your check_mk instance runs
+* `check_mk_agent_plugins_requirements: []` Requirements for extra plugins
 * `check_mk_agent_plugins: []` List of extra plugins to install
+* `check_mk_agent_local_checks: {}`
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
 * `check_mk_agent_add_to_wato: False`
-* `check_mk_monitoring_host_folder: ""`
-* `check_mk_monitoring_host_discovery_mode: new`
-* `check_mk_monitoring_host_url:`
-* `check_mk_monitoring_host_username:`
-* `check_mk_monitoring_host_secret:`
+* `check_mk_agent_monitoring_host_folder: ""`
+* `check_mk_agent_monitoring_host_discovery_mode: new`
+* `check_mk_agent_monitoring_host_url:`
+* `check_mk_agent_monitoring_host_username:`
+* `check_mk_agent_monitoring_host_secret:`
 * `check_mk_agent_setup_firewall: True` Add firewall rule (ufw/firewalld) when using systemd-socket
 
 ## Included check_mk extra plugins
@@ -91,6 +90,13 @@ None.
     check_mk_monitoring_host_url: http://cmk.example.com/monitoring/
     check_mk_monitoring_host_username: ansible
     check_mk_monitoring_host_secret: 7JTuBt6nETYHG1GS
+    check_mk_agent_local_checks:
+      filecount:
+        src: files/check_mk_local_checks/filecount
+        cache_time: 600
+      filestat:
+        src: files/check_mk_local_checks/filestat
+
   roles:
      - elnappoo.check-mk-agent
 ```
