@@ -8,6 +8,6 @@ check_mk_agent_plugins: []
 check_mk_agent_local_checks: {}
 check_mk_agent_pubkey_file:
 check_mk_agent_add_to_wato: False
-check_mk_monitoring_host_folder: ""
-check_mk_monitoring_host_discovery_mode: "new"
+check_mk_agent_monitoring_host_folder: ""
+check_mk_agent_monitoring_host_discovery_mode: "new"
 check_mk_agent_setup_firewall: True

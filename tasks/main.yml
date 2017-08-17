@@ -40,8 +40,9 @@
 
 - block:
   - name: Start and enable check_mk.socket (use systemd-socket)
-    service: 
+    systemd: 
       name: check_mk.socket
+      daemon_reload: yes
       state: started
       enabled: yes
 
@@ -103,30 +104,30 @@
     with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
 
   when: check_mk_agent_add_host_pubkey
-  delegate_to: "{{ check_mk_monitoring_host }}"
-  become_user: "{{ check_mk_monitoring_user }}"
+  delegate_to: "{{ check_mk_agent_monitoring_host }}"
+  become_user: "{{ check_mk_agent_monitoring_user }}"
   become: yes
 
 - name: Add host to check_mk instance via WATO API
   check_mk:
-    server_url: "{{ check_mk_monitoring_host_url }}"
-    username: "{{ check_mk_monitoring_host_username }}"
-    secret: "{{ check_mk_monitoring_host_secret }}"
+    server_url: "{{ check_mk_agent_monitoring_host_url }}"
+    username: "{{ check_mk_agent_monitoring_host_wato_username }}"
+    secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
     hostname: "{{ inventory_hostname }}"
-    folder: "{{ check_mk_monitoring_host_folder }}"
+    folder: "{{ check_mk_agent_monitoring_host_folder }}"
     state: present
   when: check_mk_agent_add_to_wato
-  register: check_mk_add_host_wato
+  register: check_mk_agent_add_host_wato
   delegate_to: localhost
 
 - name: Discover services via WATO API
   check_mk:
-    server_url: "{{ check_mk_monitoring_host_url }}"
-    username: "{{ check_mk_monitoring_host_username }}"
-    secret: "{{ check_mk_monitoring_host_secret }}"
+    server_url: "{{ check_mk_agent_monitoring_host_url }}"
+    username: "{{ check_mk_agent_monitoring_host_wato_username }}"
+    secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
     hostname: "{{ inventory_hostname }}"
-    discover_services: "{{ check_mk_monitoring_host_discovery_mode}}"
-  when: check_mk_add_host_wato.changed
+    discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode}}"
+  when: check_mk_agent_add_host_wato.changed
   notify:
     - Check_mk activate changes via WATO API
   delegate_to: localhost
