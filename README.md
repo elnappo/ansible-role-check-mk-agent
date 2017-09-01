@@ -14,7 +14,7 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 ## Requirements
 * Python requests >= v2.5.0
 
-Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat (Solaris support is planed).
+Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat.
 
 ## Install
     $ ansible-galaxy install elnappoo.check-mk-agent

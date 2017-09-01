@@ -103,7 +103,7 @@
       state: present
     with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
 
-  when: check_mk_agent_add_host_pubkey
+  when: check_mk_agent_over_ssh and check_mk_agent_add_host_pubkey
   delegate_to: "{{ check_mk_agent_monitoring_host }}"
   become_user: "{{ check_mk_agent_monitoring_user }}"
   become: yes
