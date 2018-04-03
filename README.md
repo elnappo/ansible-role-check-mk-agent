@@ -9,12 +9,12 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 * Setup firewall if systemd-socket ist used (ufw or firewalld)
 * Add SSH host key to check_mk server
 * Install check_mk agent plugins/local checks and their dependencies
-* Add hosts to check_mk server via WATO API
+* **Add hosts to check_mk server via WATO API**
 
 ## Requirements
 * Python requests >= v2.5.0
 
-Only tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat.
+Tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat.
 
 ## Install
     $ ansible-galaxy install elnappoo.check-mk-agent
