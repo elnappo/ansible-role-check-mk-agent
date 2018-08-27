@@ -36,6 +36,7 @@ Tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host_wato_username:`
 * `check_mk_agent_monitoring_host_wat_secret:`
 * `check_mk_agent_setup_firewall: True` Add firewall rule (ufw/firewalld) when using systemd-socket
+* `check_mk_agent_manual_install: False` Leave agent package installation to the user
 
 ## Included check_mk extra plugins
 * apache\_status
