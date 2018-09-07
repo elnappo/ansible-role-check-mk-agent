@@ -4,6 +4,7 @@
   package:
     name: check-mk-agent
     state: latest
+  when: check_mk_agent_manual_install == False
 
 - name: Install plugin requirements
   package:
