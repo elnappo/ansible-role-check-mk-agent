@@ -8,10 +8,10 @@ ANSIBLE_METADATA = {'status': ['preview'],
 DOCUMENTATION = '''
 ---
 module: check-mk
-short_description: This is a sentence describing the module
+short_description: Talk to check_mk API
 description:
-    - Longer description of the module.
-    - You might include instructions.
+    - Used to add, edit, and delete hosts via check_mk web API.
+    - Service discovery and changeset activation is also implemented.
 version_added: "0.1"
 author: "Fabian Weisshaar (@elnappo)"
 options:
