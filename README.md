@@ -1,5 +1,5 @@
 # ansible-role-check-mk-agent
-[![Build Status](https://travis-ci.org/elnappo/ansible-role-check-mk-agent.svg?branch=master)](https://travis-ci.org/elnappo/ansible-role-check-mk-agent) [![Ansible Galaxy](https://img.shields.io/badge/galaxy-elnappoo.check--mk--agent-blue.svg?style=flat)](https://galaxy.ansible.com/elnappoo/check-mk-agent/)
+[![Build Status](https://travis-ci.org/elnappo/ansible-role-check-mk-agent.svg?branch=master)](https://travis-ci.org/elnappo/ansible-role-check-mk-agent) [![Ansible Galaxy](https://img.shields.io/badge/galaxy-elnappo.check--mk--agent-blue.svg?style=flat)](https://galaxy.ansible.com/elnappo/check-mk-agent/)
 
 Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as root (default). Get more information about check\_mk at [https://mathias-kettner.de/check_mk.html]()
 
@@ -17,7 +17,7 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 Tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and RedHat.
 
 ## Install
-    $ ansible-galaxy install elnappoo.check-mk-agent
+    $ ansible-galaxy install elnappo.check-mk-agent
 
 ## Role Variables
 * `check_mk_agent_over_ssh: True`
@@ -34,51 +34,14 @@ Tested on Ubuntu 14.04, 16.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host_discovery_mode: new`
 * `check_mk_agent_monitoring_host_url:`
 * `check_mk_agent_monitoring_host_wato_username:`
-* `check_mk_agent_monitoring_host_wat_secret:`
+* `check_mk_agent_monitoring_host_wato_secret:`
 * `check_mk_agent_setup_firewall: True` Add firewall rule (ufw/firewalld) when using systemd-socket
 * `check_mk_agent_manual_install: False` Leave agent package installation to the user
 
 ## Included check_mk extra plugins
-* apache\_status
-* db2\_mem
-* dnsclient
-* hpux\_lunstats
-* hpux\_statgrab
-* jar\_signature
-* kaspersky\_av
-* lnx\_quota
-* mailman\_lists
-* mk\_inventory.aix
-* mk\_inventory.linux
-* mk\_inventory.solaris
-* mk\_jolokia
-* mk\_logins
-* mk\_logwatch
-* mk\_logwatch\_aix
-* mk\_mysql
-* mk\_oracle
-* mk\_oracle.aix
-* mk\_oracle.solaris
-* mk\_oracle\_asm
-* mk\_oracle\_crs
-* mk\_postgres
-* mk\_sap
-* mk\_tsm
-* mk\_zypper
-* netstat.aix
-* netstat.linux
-* nfsexports
-* nfsexports.solaris
-* nginx\_status
-* plesk\_backups
-* plesk\_domains
-* runas
-* smart
-* symantec\_av
-* unitrends\_backup
-* unitrends\_replication
-* vxvm
-* websphere\_mq
+Could be found under `files/plugins/`. As it is hard to keep these plugins
+up-to-date, these will be removed in a future version from the repository.
+
 
 ## Dependencies
 None.
@@ -104,7 +67,7 @@ None.
         src: files/check_mk_local_checks/filestat
 
   roles:
-     - elnappoo.check-mk-agent
+     - elnappo.check-mk-agent
 ```
 
 ## License
