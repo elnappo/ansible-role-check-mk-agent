@@ -3,13 +3,14 @@ galaxy_info:
   author: elnappo <elnappo@nerdpol.io>
   description: Install check_mk agent
   license: MIT
-  min_ansible_version: 2.1
+  min_ansible_version: 2.2
 
   platforms:
   - name: Ubuntu
     versions:
     - trusty
     - xenial
+    - bionic
   - name: Debian
     versions:
     - jessie
