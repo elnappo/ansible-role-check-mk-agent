@@ -31,7 +31,8 @@ import signal
 import ConfigParser
 
 try:
-    import pyinotify
+    # TODO: We should probably ship this package.
+    import pyinotify  # pylint: disable=import-error
 except:
     sys.stderr.write("Error: Python plugin pyinotify is not installed")
     sys.exit(1)
@@ -136,7 +137,7 @@ if not opt_foreground:
 
     # Save pid of working process.
     file(pid_filename, "w").write("%d" % os.getpid())
-
+#.
 #   .--Main----------------------------------------------------------------.
 #   |                        __  __       _                                |
 #   |                       |  \/  | __ _(_)_ __                           |
@@ -218,14 +219,14 @@ def do_output(what, event):
 
 map_events = {
     # Mode     Mask                        Report_filestats (currently unused)
-    "access"   : (pyinotify.IN_ACCESS,     False),
-    "open"     : (pyinotify.IN_OPEN,       False),
-    "create"   : (pyinotify.IN_CREATE,     False),
-    "delete"   : (pyinotify.IN_DELETE,     False),
-    "modify"   : (pyinotify.IN_MODIFY,     False),
-    "movedto"  : (pyinotify.IN_MOVED_TO,   False),
-    "movedfrom": (pyinotify.IN_MOVED_FROM, False),
-    "moveself" : (pyinotify.IN_MOVE_SELF,  False),
+    "access"   : (pyinotify.IN_ACCESS,     False), # pylint: disable=no-member
+    "open"     : (pyinotify.IN_OPEN,       False), # pylint: disable=no-member
+    "create"   : (pyinotify.IN_CREATE,     False), # pylint: disable=no-member
+    "delete"   : (pyinotify.IN_DELETE,     False), # pylint: disable=no-member
+    "modify"   : (pyinotify.IN_MODIFY,     False), # pylint: disable=no-member
+    "movedto"  : (pyinotify.IN_MOVED_TO,   False), # pylint: disable=no-member
+    "movedfrom": (pyinotify.IN_MOVED_FROM, False), # pylint: disable=no-member
+    "moveself" : (pyinotify.IN_MOVE_SELF,  False), # pylint: disable=no-member
 }
 
 class NotifyEventHandler(pyinotify.ProcessEvent):
@@ -337,7 +338,7 @@ def main():
     update_watched_folders()
     if opt_foreground:
         import pprint
-        pprint.pprint(folder_configs)
+        sys.stdout.write(pprint.pformat(folder_configs))
 
     # Save monitored file/folder information specified in mk_inotify.cfg
     file(configured_paths, "w").write("\n".join(get_watched_files())+"\n")
