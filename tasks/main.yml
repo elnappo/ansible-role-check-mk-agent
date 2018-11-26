@@ -3,20 +3,20 @@
 - name: Install check_mk_agent
   package:
     name: check-mk-agent
-    state: latest
-  when: check_mk_agent_manual_install == False
+    state: present
+  when: not check_mk_agent_manual_install
 
 - name: Install plugin requirements
   package:
-    name: "{{ item }}" 
-    state: latest
+    name: "{{ item }}"
+    state: present
   with_items: "{{ check_mk_agent_plugins_requirements }}"
 
 - name: Copy plugins
   copy:
-    src: plugins/{{ item }} 
+    src: plugins/{{ item }}
     dest: /usr/lib/check_mk_agent/plugins/{{ item }}
-    owner: root 
+    owner: root
     group: root
     mode: 0755
   with_items: "{{ check_mk_agent_plugins }}"
@@ -25,23 +25,23 @@
   file:
     name: /usr/lib/check_mk_agent/local/{{ item.value.cache_time }}
     state: directory
-    owner: root 
+    owner: root
     group: root
-    mode: 0755    
+    mode: 0755
   with_dict: "{{ check_mk_agent_local_checks }}"
 
 - name: Copy local checks
   copy:
     src: "{{ item.value.src }}"
     dest: /usr/lib/check_mk_agent/local/{{ item.value.cache_time | default(omit) }}/{{ item.key }}
-    owner: root 
+    owner: root
     group: root
     mode: 0755
   with_dict: "{{ check_mk_agent_local_checks }}"
 
 - block:
   - name: Start and enable check_mk.socket (use systemd-socket)
-    systemd: 
+    systemd:
       name: check_mk.socket
       daemon_reload: yes
       state: started
@@ -64,7 +64,7 @@
 
 - name: Setup SSH key
   authorized_key:
-    user: root 
+    user: root
     key_options: 'command="/usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
     key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
   when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file and not check_mk_agent_with_sudo
@@ -84,7 +84,7 @@
       dest: /etc/sudoers.d/check_mk_agent
 
   - name: Setup SSH key with sudo
-    authorized_key: 
+    authorized_key:
       user: checkmk_agent
       key_options: 'command="sudo /usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
       key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
@@ -96,7 +96,9 @@
     shell: ssh-keyscan -T 10 {{ inventory_hostname }}
     changed_when: False
     register: check_mk_agent_host_ssh_pubkey
-  
+    tags:
+      - skip_ansible_lint
+
   - name: Add known_host entry to monitoring instance
     known_hosts:
       name: "{{ inventory_hostname }}"
@@ -120,6 +122,8 @@
   when: check_mk_agent_add_to_wato
   register: check_mk_agent_add_host_wato
   delegate_to: localhost
+  tags:
+    - skip_ansible_lint
 
 - name: Discover services via WATO API
   check_mk:
@@ -127,8 +131,10 @@
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
     hostname: "{{ inventory_hostname }}"
-    discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode}}"
+    discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode }}"
   when: check_mk_agent_add_host_wato.changed
   notify:
     - Check_mk activate changes via WATO API
   delegate_to: localhost
+  tags:
+    - skip_ansible_lint

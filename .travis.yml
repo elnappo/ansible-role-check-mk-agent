@@ -7,7 +7,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq python-apt python-pycurl curl ufw
 install:
-  - pip install ansible --upgrade
+  - pip install ansible ansible-lint --upgrade
   - ansible --version
   - printf '[defaults]\nroles_path=../' >ansible.cfg
   - echo localhost > inventory
@@ -22,5 +22,6 @@ script:
   - check_mk_agent
 after_script:
   - ls -la /usr/lib/check_mk_agent/plugins/
+  - ansible-lint .
 notifications:
   webhooks: https://galaxy.ansible.com/api/v1/notifications/
