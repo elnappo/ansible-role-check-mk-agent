@@ -39,27 +39,28 @@
     mode: 0755
   with_dict: "{{ check_mk_agent_local_checks }}"
 
-- block:
-  - name: Start and enable check_mk.socket (use systemd-socket)
-    systemd:
-      name: check_mk.socket
-      daemon_reload: yes
-      state: started
-      enabled: yes
+- name: systemd socket activation
+  block:
+    - name: Start and enable check_mk.socket (use systemd-socket)
+      systemd:
+        name: check_mk.socket
+        daemon_reload: true
+        state: started
+        enabled: true
 
-  - name: Allow check_mk.socket (ufw)
-    ufw: rule=allow port=6656 proto=tcp
-    when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
+    - name: Allow check_mk.socket (ufw)
+      ufw: rule=allow port=6656 proto=tcp
+      when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
 
-  - name: Allow check_mk.socket (firewalld)
-    firewalld:
-      port: 6556/tcp
-      zone: public
-      permanent: true
-      state: enabled
-    when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
-    notify:
-      - Restart firewalld
+    - name: Allow check_mk.socket (firewalld)
+      firewalld:
+        port: 6556/tcp
+        zone: public
+        permanent: true
+        state: enabled
+      when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
+      notify:
+        - Restart firewalld
   when: not check_mk_agent_over_ssh
 
 - name: Setup SSH key
@@ -69,47 +70,48 @@
     key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
   when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file and not check_mk_agent_with_sudo
 
-- block:
-  - name: Add check_mk user for use with sudo
-    user:
-      name: checkmk_agent
-      system: yes
-      home: /usr/lib/check_mk_agent/local
-      createhome: no
-      state: present
+- name: check_mk_agent with sudo
+  block:
+    - name: Add check_mk user for use with sudo
+      user:
+        name: checkmk_agent
+        system: true
+        home: /usr/lib/check_mk_agent/local
+        createhome: false
+        state: present
 
-  - name: Allow checkmk_agent user to run /usr/bin/check_mk_agent with sudo
-    copy:
-      src: sudoers_check_mk_agent
-      dest: /etc/sudoers.d/check_mk_agent
+    - name: Allow checkmk_agent user to run /usr/bin/check_mk_agent with sudo
+      copy:
+        src: sudoers_check_mk_agent
+        dest: /etc/sudoers.d/check_mk_agent
 
-  - name: Setup SSH key with sudo
-    authorized_key:
-      user: checkmk_agent
-      key_options: 'command="sudo /usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
-      key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
-
+    - name: Setup SSH key with sudo
+      authorized_key:
+        user: checkmk_agent
+        key_options: 'command="sudo /usr/bin/check_mk_agent",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc'
+        key: "{{ lookup('file', check_mk_agent_pubkey_file) }}"
   when: check_mk_agent_over_ssh and check_mk_agent_pubkey_file and check_mk_agent_with_sudo
 
-- block:
-  - name: Scan SSH host pubkey
-    shell: ssh-keyscan -T 10 {{ inventory_hostname }}
-    changed_when: False
-    register: check_mk_agent_host_ssh_pubkey
-    tags:
-      - skip_ansible_lint
+- name: Add SSH host key
+  block:
+    - name: Scan SSH host pubkey
+      shell: ssh-keyscan -T 10 {{ inventory_hostname }}
+      changed_when: false
+      register: check_mk_agent_host_ssh_pubkey
+      tags:
+        - skip_ansible_lint
 
-  - name: Add known_host entry to monitoring instance
-    known_hosts:
-      name: "{{ inventory_hostname }}"
-      key: "{{ item }}"
-      state: present
-    with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
+    - name: Add known_host entry to monitoring instance
+      known_hosts:
+        name: "{{ inventory_hostname }}"
+        key: "{{ item }}"
+        state: present
+      with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
 
   when: check_mk_agent_over_ssh and check_mk_agent_add_host_pubkey
   delegate_to: "{{ check_mk_agent_monitoring_host }}"
   become_user: "{{ check_mk_agent_monitoring_user }}"
-  become: yes
+  become: true
 
 - name: Add host to check_mk instance via WATO API
   check_mk:

@@ -1,0 +1,33 @@
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: Retrieve new lists of packages and performs an upgrade
+      apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+        autoclean: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+
+    - name: Retrieve new lists of packages and performs an upgrade
+      pacman:
+        update_cache: true
+        upgrade: true
+      when: ansible_os_family == 'Archlinux'
+
+    - name: Retrieve new lists of packages and performs an upgrade
+      yum:
+        name: '*'
+        update_cache: true
+        state: latest
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install dependencies
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ufw
+        - net-tools

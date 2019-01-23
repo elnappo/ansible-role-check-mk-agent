@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  roles:
+    - role: ansible-role-check-mk-agent
+      check_mk_agent_over_ssh: false
+      check_mk_agent_plugins_requirements: ["smartmontools"]
+      check_mk_agent_plugins: ["smart"]
