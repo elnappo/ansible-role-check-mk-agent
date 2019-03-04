@@ -17,6 +17,7 @@
     path: /usr/lib/check_mk_agent/plugins/
     owner: root
     group: root
+    state: directory
 
 - name: Copy plugins
   copy:
