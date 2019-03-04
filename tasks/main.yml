@@ -12,6 +12,12 @@
     state: present
   with_items: "{{ check_mk_agent_plugins_requirements }}"
 
+- name: Create plugins repository
+  file:
+    path: /usr/lib/check_mk_agent/plugins/
+    owner: root
+    group: root
+
 - name: Copy plugins
   copy:
     src: plugins/{{ item }}
