@@ -7,12 +7,12 @@ ANSIBLE_METADATA = {'status': ['preview'],
 
 DOCUMENTATION = '''
 ---
-module: check-mk
+module: check_mk
 short_description: Talk to check_mk API
 description:
     - Used to add, edit, and delete hosts via check_mk web API.
     - Service discovery and changeset activation is also implemented.
-version_added: "0.1"
+version_added: "0.2"
 author: "Fabian Weisshaar (@elnappo)"
 options:
     server_url:
@@ -77,6 +77,12 @@ options:
         required: false
         default: {}
 
+    validate_certs:
+        description:
+            - Verify SSL certificate or not
+        required: false
+        default: True
+
 notes:
     - Other things consumers of your module should know.
 
@@ -86,7 +92,7 @@ requirements:
 
 EXAMPLES = '''
 - name: Add host to monitoring
-  check-mk:
+  check_mk:
     hostname: {{ inventory_hostname }}
     folder: os/linux
     state: present
@@ -94,7 +100,7 @@ EXAMPLES = '''
   notify: check_mk activate changes
 
 - name: Add host to monitoring and discover services
-  check-mk:
+  check_mk:
     hostname: {{ inventory_hostname }}
     folder: dfd-inf
     discover_services: refresh
@@ -103,7 +109,7 @@ EXAMPLES = '''
   notify: "check_mk activate changes"
 
 - name: Remove host from monitoring
-  check-mk:
+  check_mk:
     hostname: {{ inventory_hostname }}
     state: absent
   delegate_to: localhost
@@ -111,7 +117,7 @@ EXAMPLES = '''
 
 handlers:
   - name: check_mk activate changes
-    check-mk: activate_changes=all
+    check_mk: activate_changes=all
 '''
 
 RETURN = '''
@@ -145,12 +151,12 @@ class CheckMKAPI(object):
 
     def _api_request(self, action, payload=None, fail_on_error=True):
         try:
-            r = self._session.post(self._api_url + action, data=payload or {})
+            r = self._session.post(self._api_url + action, data=payload or {}, verify=self._module.params["validate_certs"])
             r.raise_for_status()
             if r.json()["result_code"] != 0 and fail_on_error:
                 self._module.fail_json(msg=r.json()["result"])
             return r.json()["result"]
-        except json.JSONDecodeError:
+        except getattr(json.decoder, 'JSONDecodeError', ValueError):
             self._module.fail_json(msg=r.text, http_status_code=r.status_code, payload=payload)
         except requests.exceptions.RequestException as err:
             self._module.fail_json(msg=str(err), payload=payload)
@@ -190,6 +196,7 @@ def main():
         folder=dict(type="str", default=""),
         # attributes=dict(type="dict", default={}),
         state=dict(type="str", choices=['present', 'absent'], default="present"),
+        validate_certs=dict(type="bool", default=True),
 
         discover_services=dict(type="str", choices=['new', 'remove', 'fixall', 'refresh']),
         activate_changes=dict(type="bool")
