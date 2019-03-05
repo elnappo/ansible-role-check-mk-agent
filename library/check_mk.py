@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '0.1'}
@@ -127,7 +128,6 @@ dest:
     type: string
     sample: /path/to/file.txt
 '''
-
 from ansible.module_utils.basic import AnsibleModule
 from distutils.version import LooseVersion
 import json
@@ -165,12 +165,12 @@ class CheckMKAPI(object):
         return self._api_request("&action=get_host&effective_attributes=1", {'hostname': hostname})
 
     def add_host(self, hostname, folder, attributes=None):
-        payload = {'hostname': hostname, "folder": folder, "attributes": attributes or {}}
-        return self._api_request("&action=add_host", payload)
+        payload = {'hostname': hostname, "folder": folder, 'attributes': attributes or {}}
+        return self._api_request("&action=add_host", "request="+json.dumps(payload))
 
     def edit_host(self, hostname, attributes=None, unset_attributes=None):
-        payload = {'hostname': hostname, "attributes": attributes or {}, "unset_attributes": unset_attributes or []}
-        return self._api_request("&action=edit_host", payload)
+        payload = {"attributes": attributes, "hostname": hostname, "unset_attributes": unset_attributes or []}
+        return self._api_request("&action=edit_host","request="+json.dumps(payload))
 
     def delete_host(self, hostname):
         return self._api_request("&action=delete_host", {'hostname': hostname})
@@ -194,7 +194,7 @@ def main():
 
         hostname=dict(type="str"),
         folder=dict(type="str", default=""),
-        # attributes=dict(type="dict", default={}),
+        attributes=dict(type="dict", default={}),
         state=dict(type="str", choices=['present', 'absent'], default="present"),
         validate_certs=dict(type="bool", default=True),
 
@@ -218,11 +218,16 @@ def main():
 
         if a_module.params["state"] == "present" and not host_exists:
             result["changed"] = True
-            cmk.add_host(a_module.params["hostname"], a_module.params["folder"])
+            result["addhost"] = cmk.add_host(a_module.params["hostname"], a_module.params["folder"], a_module.params["attributes"])
 
         if a_module.params["state"] == "absent" and host_exists:
             result["changed"] = True
             cmk.delete_host(a_module.params["hostname"])
+
+    # Adjust attributes
+    if a_module.params["hostname"] and host_exists and  a_module.params["attributes"]:
+        result["changed"] = True
+        result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
 
     # discover services
     if a_module.params["discover_services"]:
@@ -234,8 +239,8 @@ def main():
 
     # activate changes
     if a_module.params["activate_changes"]:
-        result["changed"] = True
-        result["activate_changes"] = cmk.activate_changes()
+        if result["changed"] == True:
+           result["activate_changes"] = cmk.activate_changes()
 
     a_module.exit_json(**result)
 
