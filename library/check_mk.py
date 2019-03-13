@@ -165,7 +165,7 @@ class CheckMKAPI(object):
         return self._api_request("&action=get_host&effective_attributes=1", {'hostname': hostname})
 
     def add_host(self, hostname, folder, attributes=None):
-        payload = {'hostname': hostname, "folder": folder, 'attributes': attributes or {}}
+        payload = {'hostname': hostname, "folder": folder.lower(), 'attributes': attributes or {}}
         return self._api_request("&action=add_host", "request="+json.dumps(payload))
 
     def edit_host(self, hostname, attributes=None, unset_attributes=None):
