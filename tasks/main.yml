@@ -49,7 +49,10 @@
         enabled: true
 
     - name: Allow check_mk.socket (ufw)
-      ufw: rule=allow port=6656 proto=tcp
+      ufw:
+        rule: allow
+        port: 6556
+        proto: tcp
       when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
 
     - name: Allow check_mk.socket (firewalld)
