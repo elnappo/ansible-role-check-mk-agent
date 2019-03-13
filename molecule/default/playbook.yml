@@ -1,8 +1,13 @@
 ---
 - name: Converge
   hosts: all
+  pre_tasks:
+    - name: Install check_mk_agent > v1.4
+      apt:
+        deb: "http://dns.lihas.de/debian/packages.buster/check-mk-agent_1.5.0p12-1_all.deb"
   roles:
     - role: ansible-role-check-mk-agent
       check_mk_agent_over_ssh: false
       check_mk_agent_plugins_requirements: ["smartmontools"]
       check_mk_agent_plugins: ["smart"]
+      check_mk_agent_manual_install: true

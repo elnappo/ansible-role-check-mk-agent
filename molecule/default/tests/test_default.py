@@ -13,4 +13,4 @@ def test_check_mk_agent_server_is_installed(host):
 
 
 def test_check_mk_agent_socket_is_listening(host):
-    assert host.socket("tcp://0.0.0.0:6656").is_listening
+    assert host.socket("tcp://0.0.0.0:6556").is_listening
