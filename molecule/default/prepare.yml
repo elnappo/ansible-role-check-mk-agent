@@ -31,3 +31,13 @@
       loop:
         - ufw
         - net-tools
+      when: ansible_os_family == 'Debian'
+
+    - name: Install dependencies
+      package:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - firewalld
+        - net-tools
+      when: ansible_os_family == 'RedHat'
