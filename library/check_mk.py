@@ -239,8 +239,8 @@ def main():
 
     # activate changes
     if a_module.params["activate_changes"]:
-        if result["changed"] == True:
-           result["activate_changes"] = cmk.activate_changes()
+        result["changed"] = True
+        result["activate_changes"] = cmk.activate_changes()
 
     a_module.exit_json(**result)
 
