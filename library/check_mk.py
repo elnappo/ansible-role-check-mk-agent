@@ -118,7 +118,8 @@ EXAMPLES = '''
 
 handlers:
   - name: check_mk activate changes
-    check_mk: activate_changes=all
+    check_mk:
+      activate_changes: true
 '''
 
 RETURN = '''
