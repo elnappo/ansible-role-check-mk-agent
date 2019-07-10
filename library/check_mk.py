@@ -227,8 +227,9 @@ def main():
 
     # Adjust attributes
     if a_module.params["hostname"] and host_exists and  a_module.params["attributes"]:
-        result["changed"] = True
-        result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
+        if not a_module.params["attributes"].viewitems() <= cmk.get_host_attributes(a_module.params["hostname"])["attributes"].viewitems():
+            result["changed"] = True
+            result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
 
     # discover services
     if a_module.params["discover_services"]:
