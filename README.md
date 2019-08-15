@@ -21,6 +21,7 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 
 ## Role Variables
 * `check_mk_agent_over_ssh: True`
+* `check_mk_agent_over_xinetd: False`
 * `check_mk_agent_with_sudo: False` Adds a user which is allowed to run check_mk_agent with sudo
 * `check_mk_agent_add_host_pubkey: False` Import SSH host keys into your check_mk servers known_hosts file
 * `check_mk_agent_monitoring_host:` Hostname of your check_mk server
