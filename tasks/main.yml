@@ -71,7 +71,42 @@
       when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
       notify:
         - Restart firewalld
-  when: not check_mk_agent_over_ssh
+  when:
+    - not check_mk_agent_over_ssh
+    - not check_mk_agent_over_xinetd
+
+- name: xinetd service activation
+  block:
+    - name: Install xinetd package
+      package:
+        name: xinetd
+        state: installed
+
+    - name: Start and enable xinetd
+      service:
+        name: xinetd
+        state: started
+        enabled: true
+
+    - name: Allow check_mk.socket (ufw)
+      ufw:
+        rule: allow
+        port: 6556
+        proto: tcp
+      when: check_mk_agent_setup_firewall and ansible_os_family == "Debian"
+
+    - name: Allow check_mk.socket (firewalld)
+      firewalld:
+        port: 6556/tcp
+        zone: public
+        permanent: true
+        state: enabled
+      when: check_mk_agent_setup_firewall and ansible_os_family == "RedHat"
+      notify:
+        - Restart firewalld
+  when:
+    - not check_mk_agent_over_ssh
+    - check_mk_agent_over_xinetd
 
 - name: Setup SSH key
   authorized_key:
