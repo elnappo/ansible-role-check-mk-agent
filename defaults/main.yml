@@ -1,7 +1,7 @@
 ---
 # defaults file for check_mk agent
 check_mk_agent_over_ssh: true
-check_mk_agent_over_xinetd:
+check_mk_agent_over_xinetd: false
 check_mk_agent_with_sudo: false
 check_mk_agent_add_host_pubkey: false
 check_mk_agent_plugins_requirements: []

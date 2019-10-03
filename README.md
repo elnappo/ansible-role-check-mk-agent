@@ -20,24 +20,24 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
     $ ansible-galaxy install elnappo.check_mk_agent
 
 ## Role Variables
-* `check_mk_agent_over_ssh: True`
-* `check_mk_agent_over_xinetd: False`
-* `check_mk_agent_with_sudo: False` Adds a user which is allowed to run check_mk_agent with sudo
-* `check_mk_agent_add_host_pubkey: False` Import SSH host keys into your check_mk servers known_hosts file
+* `check_mk_agent_over_ssh: true`
+* `check_mk_agent_over_xinetd: false`
+* `check_mk_agent_with_sudo: false` Adds a user which is allowed to run check_mk_agent with sudo
+* `check_mk_agent_add_host_pubkey: false` Import SSH host keys into your check_mk servers known_hosts file
 * `check_mk_agent_monitoring_host:` Hostname of your check_mk server
 * `check_mk_agent_monitoring_user:` Username under which your check_mk instance runs
 * `check_mk_agent_plugins_requirements: []` Requirements for extra plugins
 * `check_mk_agent_plugins: []` List of extra plugins to install
 * `check_mk_agent_local_checks: {}`
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
-* `check_mk_agent_add_to_wato: False`
+* `check_mk_agent_add_to_wato: false`
 * `check_mk_agent_monitoring_host_folder: ""`
 * `check_mk_agent_monitoring_host_discovery_mode: new`
 * `check_mk_agent_monitoring_host_url:`
 * `check_mk_agent_monitoring_host_wato_username:`
 * `check_mk_agent_monitoring_host_wato_secret:`
-* `check_mk_agent_setup_firewall: True` Add firewall rule (ufw/firewalld) when using systemd-socket
-* `check_mk_agent_manual_install: False` Leave agent package installation to the user
+* `check_mk_agent_setup_firewall: true` Add firewall rule (ufw/firewalld) when using systemd-socket or xinetd
+* `check_mk_agent_manual_install: false` Leave agent package installation to the user
 
 ## Included check_mk extra plugins
 Could be found under `files/plugins/`. As it is hard to keep these plugins
@@ -53,10 +53,10 @@ None.
 - hosts: servers
   vars:
     check_mk_agent_pubkey_file: omd_rsa.pub
-    check_mk_agent_add_host_pubkey: True
+    check_mk_agent_add_host_pubkey: true
     check_mk_agent_monitoring_host: checkmk.example.com
     check_mk_agent_monitoring_user: monitoring
-    check_mk_agent_add_to_wato: True
+    check_mk_agent_add_to_wato: true
     check_mk_agent_monitoring_host_url: http://cmk.example.com/monitoring/
     check_mk_agent_monitoring_host_wato_username: ansible
     check_mk_agent_monitoring_host_wato_secret: 7JTuBt6nETYHG1GS
