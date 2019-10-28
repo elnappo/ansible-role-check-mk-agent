@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'version': '0.1'}
+ANSIBLE_METADATA = {"status": ["preview"],
+                    "supported_by": "community",
+                    "version": "0.1"}
 
-DOCUMENTATION = '''
+DOCUMENTATION = """
 ---
 module: check_mk
 short_description: Talk to check_mk API
@@ -89,9 +89,9 @@ notes:
 
 requirements:
     - requests >= 2.5.0
-'''
+"""
 
-EXAMPLES = '''
+EXAMPLES = """
 - name: Add host to monitoring
   check_mk:
     hostname: {{ inventory_hostname }}
@@ -120,15 +120,15 @@ handlers:
   - name: check_mk activate changes
     check_mk:
       activate_changes: true
-'''
+"""
 
-RETURN = '''
+RETURN = """
 dest:
     description: destination file/path
     returned: success
     type: string
     sample: /path/to/file.txt
-'''
+"""
 from ansible.module_utils.basic import AnsibleModule
 from distutils.version import LooseVersion
 import json
@@ -156,34 +156,38 @@ class CheckMKAPI(object):
             r.raise_for_status()
             if r.json()["result_code"] != 0 and fail_on_error:
                 self._module.fail_json(msg=r.json()["result"])
+
             return r.json()["result"]
-        except getattr(json.decoder, 'JSONDecodeError', ValueError):
+
+        except getattr(json.decoder, "JSONDecodeError", ValueError):
             self._module.fail_json(msg=r.text, http_status_code=r.status_code, payload=payload)
         except requests.exceptions.RequestException as err:
             self._module.fail_json(msg=str(err), payload=payload)
 
     def get_host_attributes(self, hostname):
-        return self._api_request("&action=get_host&effective_attributes=1", {'hostname': hostname})
+        return self._api_request("&action=get_host&effective_attributes=1", {"hostname": hostname})
 
     def add_host(self, hostname, folder, attributes=None):
-        payload = {'hostname': hostname, "folder": folder.lower(), 'attributes': attributes or {}}
-        return self._api_request("&action=add_host", "request="+json.dumps(payload))
+        data = {"hostname": hostname, "folder": folder.lower(), "attributes": attributes or {}}
+        payload = [("request", json.dumps(data))]
+        return self._api_request("&action=add_host", payload)
 
     def edit_host(self, hostname, attributes=None, unset_attributes=None):
-        payload = {"attributes": attributes, "hostname": hostname, "unset_attributes": unset_attributes or []}
-        return self._api_request("&action=edit_host","request="+json.dumps(payload))
+        data = {"attributes": attributes, "hostname": hostname, "unset_attributes": unset_attributes or []}
+        payload = [("request", json.dumps(data))]
+        return self._api_request("&action=edit_host", payload)
 
     def delete_host(self, hostname):
-        return self._api_request("&action=delete_host", {'hostname': hostname})
+        return self._api_request("&action=delete_host", {"hostname": hostname})
 
     def discover_services(self, hostname, mode="new"):
-        return self._api_request("&action=discover_services&mode=%s" % mode, {'hostname': hostname})
+        return self._api_request("&action=discover_services&mode=%s" % mode, {"hostname": hostname})
 
     def activate_changes(self, mode="dirty"):
         return self._api_request("&action=activate_changes&mode=%s" % mode)
 
     def host_exists(self, hostname):
-        return self._api_request("&action=get_host&effective_attributes=1", {'hostname': hostname},
+        return self._api_request("&action=get_host&effective_attributes=1", {"hostname": hostname},
                                  False) != "Check_MK exception: No such host"
 
 
@@ -196,19 +200,19 @@ def main():
         hostname=dict(type="str"),
         folder=dict(type="str", default=""),
         attributes=dict(type="dict", default={}),
-        state=dict(type="str", choices=['present', 'absent'], default="present"),
+        state=dict(type="str", choices=["present", "absent"], default="present"),
         validate_certs=dict(type="bool", default=True),
 
-        discover_services=dict(type="str", choices=['new', 'remove', 'fixall', 'refresh']),
+        discover_services=dict(type="str", choices=["new", "remove", "fixall", "refresh"]),
         activate_changes=dict(type="bool")
     )
     a_module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=False)
 
     if not REQUESTS_FOUND:
-        a_module.fail_json(msg='requests library is required for this module')
+        a_module.fail_json(msg="requests library is required for this module")
 
-    if requests.__version__ and LooseVersion(requests.__version__) < LooseVersion('2.5.0'):
-        a_module.fail_json(msg='requests library version should be >= 2.5.0')
+    if requests.__version__ and LooseVersion(requests.__version__) < LooseVersion("2.5.0"):
+        a_module.fail_json(msg="requests library version should be >= 2.5.0")
 
     cmk = CheckMKAPI(a_module)
     result = dict(changed=False)
@@ -233,7 +237,7 @@ def main():
     # discover services
     if a_module.params["discover_services"]:
         if not a_module.params["hostname"]:
-            a_module.fail_json(msg='Hostname is required when using discover_services')
+            a_module.fail_json(msg="Hostname is required when using discover_services")
 
         result["changed"] = True
         result["discover_services"] = cmk.discover_services(a_module.params["hostname"], a_module.params["discover_services"])
@@ -246,5 +250,5 @@ def main():
     a_module.exit_json(**result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
