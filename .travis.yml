@@ -11,6 +11,7 @@ env:
     - MOLECULE_DISTRO: centos7
 
 install:
+  - sudo modprobe ip6_tables
   - pip install molecule docker
 
 script:
