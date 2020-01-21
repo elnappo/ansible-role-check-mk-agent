@@ -5,6 +5,11 @@
     name: firewalld
     state: restarted
 
+- name: Restart xinetd
+  service:
+    name: xinetd
+    state: restarted
+
 - name: Check_mk activate changes via WATO API
   check_mk:
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
