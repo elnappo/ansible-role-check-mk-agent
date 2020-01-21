@@ -38,7 +38,7 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host_wato_secret:`
 * `check_mk_agent_setup_firewall: true` Add firewall rule (ufw/firewalld) when using systemd-socket or xinetd
 * `check_mk_agent_manual_install: false` Leave agent package installation to the user
-* `check_mk_agent_xinetd_only_from: '127.0.0.1'` IP address permit to run check_mk over xinetd
+* `check_mk_agent_xinetd_only_from: ""` IP address permit to run check_mk over xinetd, if not define permit from everywhere
 * `check_mk_agent_xinetd_port: 6556` xinetd port used for check_mk
 
 ## Included check_mk extra plugins
