@@ -80,7 +80,7 @@
     - name: Install xinetd package
       package:
         name: xinetd
-        state: installed
+        state: present
 
     - name: Start and enable xinetd
       service:
