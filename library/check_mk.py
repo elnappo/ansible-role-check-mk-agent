@@ -230,7 +230,7 @@ def main():
             cmk.delete_host(a_module.params["hostname"])
 
     # Adjust attributes
-    if a_module.params["hostname"] and host_exists and  a_module.params["attributes"]:
+    if a_module.params["hostname"] and host_exists and a_module.params["attributes"]:
         result["changed"] = True
         result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
 

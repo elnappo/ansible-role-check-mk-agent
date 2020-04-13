@@ -23,6 +23,8 @@
         update_cache: true
         state: latest
       when: ansible_os_family == 'RedHat'
+      tags:
+        - skip_ansible_lint
 
     - name: Install dependencies
       package:

@@ -12,7 +12,7 @@ env:
 
 install:
   - sudo modprobe ip6_tables
-  - pip install molecule docker
+  - pip install molecule yamllint ansible-lint flake8 docker pytest testinfra
 
 script:
   - molecule test
