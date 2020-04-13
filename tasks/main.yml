@@ -88,6 +88,13 @@
         state: started
         enabled: true
 
+    - name: Add check_mk xinetd service
+      template:
+        src: check_mk.j2
+        dest: /etc/xinetd.d/check-mk-agent
+      notify:
+        - Restart xinetd
+
     - name: Allow check_mk.socket (ufw)
       ufw:
         rule: allow
