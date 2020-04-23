@@ -3,7 +3,7 @@
 - name: Install check_mk_agent
   package:
     name: check-mk-agent
-    state: present
+    state: "{{ chck_mk_agent_package_state }}"
   when: not check_mk_agent_manual_install
 
 - name: Install plugin requirements

@@ -14,3 +14,4 @@ check_mk_agent_monitoring_host_discovery_mode: "new"
 check_mk_agent_setup_firewall: true
 check_mk_agent_manual_install: false
 check_mk_agent_validate_certs: true
+chck_mk_agent_package_state: present
