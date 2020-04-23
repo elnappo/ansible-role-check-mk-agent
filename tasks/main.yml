@@ -163,6 +163,7 @@
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
+    validate_certs: "{{ check_mk_agent_validate_certs }}"
     hostname: "{{ inventory_hostname }}"
     folder: "{{ check_mk_agent_monitoring_host_folder }}"
     state: present
@@ -177,6 +178,7 @@
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
+    validate_certs: "{{ check_mk_agent_validate_certs }}"
     hostname: "{{ inventory_hostname }}"
     discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode }}"
   when: check_mk_agent_add_host_wato.changed
