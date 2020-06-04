@@ -66,10 +66,29 @@ None.
         cache_time: 600
       filestat:
         src: files/check_mk_local_checks/filestat
+    check_mk_agent_plugins:
+      - name: smart
+        asynchronous: 300
+      - name: mk_apt
+        asynchronous: 86400
+      - name: lvm
+
 
   roles:
      - elnappo.check_mk_agent
 ```
+
+### Asynchronous plug-in execution
+
+Checkmk is able to manage Asynchronous execution of plug-ins, [More information in checkmk documentation](https://checkmk.com/cms_agent_linux.html#Asynchronous%20execution)
+
+To use plug-in in Asynchronous, need to add asynchronous information like with
+```
+check_mk_agent_plugins:
+  - name: smart
+    asynchronous: 300
+```
+
 
 ## License
 
