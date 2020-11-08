@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+servers = [
+{% for server in item.servers %}
+    {
+        'protocol': '{{ server.protocol }}',
+        'address': '{{ server.address }}',
+        'port': {{ server.port }},
+        'page': '{{ server.page | default('nginx_status') }}'
+    },
+{% endfor %}
+]

@@ -94,7 +94,7 @@ requirements:
 EXAMPLES = """
 - name: Add host to monitoring
   check_mk:
-    hostname: {{ inventory_hostname }}
+    hostname: {{ ansible_hostname }}
     folder: os/linux
     state: present
   delegate_to: localhost
@@ -102,7 +102,7 @@ EXAMPLES = """
 
 - name: Add host to monitoring and discover services
   check_mk:
-    hostname: {{ inventory_hostname }}
+    hostname: {{ ansible_hostname }}
     folder: dfd-inf
     discover_services: refresh
     state: present
@@ -111,7 +111,7 @@ EXAMPLES = """
 
 - name: Remove host from monitoring
   check_mk:
-    hostname: {{ inventory_hostname }}
+    hostname: {{ ansible_hostname }}
     state: absent
   delegate_to: localhost
   notify: "check_mk activate changes"
@@ -164,7 +164,7 @@ class CheckMKAPI(object):
         except requests.exceptions.RequestException as err:
             self._module.fail_json(msg=str(err), payload=payload)
 
-    def get_host_attributes(self, hostname):
+    def get_host(self, hostname):
         return self._api_request("&action=get_host&effective_attributes=1", {"hostname": hostname})
 
     def add_host(self, hostname, folder, attributes=None):
@@ -189,7 +189,6 @@ class CheckMKAPI(object):
     def host_exists(self, hostname):
         return self._api_request("&action=get_host&effective_attributes=1", {"hostname": hostname},
                                  False) != "Check_MK exception: No such host"
-
 
 def main():
     argument_spec = dict(
@@ -231,8 +230,13 @@ def main():
 
     # Adjust attributes
     if a_module.params["hostname"] and host_exists and a_module.params["attributes"]:
-        result["changed"] = True
-        result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
+        current_host = cmk.get_host(a_module.params["hostname"])
+        current_host_labels = current_host["attributes"]["labels"]
+        expected_host_labels = a_module.params["attributes"]["labels"]
+
+        if (current_host_labels != expected_host_labels):
+            result["changed"] = True
+            result["edit_host"] = cmk.edit_host(a_module.params["hostname"], a_module.params["attributes"])
 
     # discover services
     if a_module.params["discover_services"]:
