@@ -5,11 +5,13 @@ check_mk_agent_over_xinetd: false
 check_mk_agent_with_sudo: false
 check_mk_agent_add_host_pubkey: false
 check_mk_agent_plugins_requirements: []
-check_mk_agent_plugins: []
+check_mk_agent_plugins: {}
 check_mk_agent_local_checks: {}
 check_mk_agent_pubkey_file:
 check_mk_agent_add_to_wato: false
 check_mk_agent_monitoring_host_folder: ""
+check_mk_agent_monitoring_host_attributes: {}
 check_mk_agent_monitoring_host_discovery_mode: "new"
+check_mk_agent_monitoring_host_validate_certificate: true
 check_mk_agent_setup_firewall: true
 check_mk_agent_manual_install: false

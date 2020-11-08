@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+{% for log in item.logs %}
+{{ log.name }}
+{% for action in log.actions %}
+ {{ action.criticality }} {{ action.regexp }}
+{% endfor %}
+
+{% endfor %}

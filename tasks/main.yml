@@ -2,7 +2,7 @@
 # tasks file for check_mk agent
 - name: Install check_mk_agent
   package:
-    name: check-mk-agent
+    name: "{{ check_mk_agent_package }}"
     state: present
   when: not check_mk_agent_manual_install
 
@@ -21,11 +21,21 @@
 
 - name: Copy plugins
   copy:
-    src: plugins/{{ item }}
-    dest: /usr/lib/check_mk_agent/plugins/{{ item }}
+    src: "plugins/{{ item.name }}"
+    dest: "/usr/lib/check_mk_agent/plugins/{{ item.name }}"
     owner: root
     group: root
     mode: 0755
+  with_items: "{{ check_mk_agent_plugins }}"
+  register: check_mk_agent_plugins_have_changed
+
+- name: Configure plugins
+  template:
+    src: "{{ item.config_file }}.j2"
+    dest: "/etc/check_mk/{{ item.config_file }}"
+    owner: root
+    group: root
+    mode: 0644
   with_items: "{{ check_mk_agent_plugins }}"
 
 - name: Create cache time directories
@@ -45,6 +55,7 @@
     group: root
     mode: 0755
   with_dict: "{{ check_mk_agent_local_checks }}"
+  register: check_mk_agent_local_checks_have_changed
 
 - name: systemd socket activation
   block:
@@ -140,7 +151,7 @@
 - name: Add SSH host key
   block:
     - name: Scan SSH host pubkey
-      shell: ssh-keyscan -T 10 {{ inventory_hostname }}
+      shell: ssh-keyscan -T 10 {{ ansible_fqdn }}
       changed_when: false
       register: check_mk_agent_host_ssh_pubkey
       tags:
@@ -148,7 +159,7 @@
 
     - name: Add known_host entry to monitoring instance
       known_hosts:
-        name: "{{ inventory_hostname }}"
+        name: "{{ ansible_fqdn }}"
         key: "{{ item }}"
         state: present
       with_items: "{{ check_mk_agent_host_ssh_pubkey.stdout_lines }}"
@@ -163,9 +174,12 @@
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
-    hostname: "{{ inventory_hostname }}"
+    hostname: "{{ ansible_fqdn }}"
     folder: "{{ check_mk_agent_monitoring_host_folder }}"
+    attributes: "{{ check_mk_agent_monitoring_host_attributes }}"
     state: present
+    validate_certs: "{{ check_mk_agent_monitoring_host_validate_certificate }}"
+  become: false
   when: check_mk_agent_add_to_wato
   register: check_mk_agent_add_host_wato
   delegate_to: localhost
@@ -177,9 +191,13 @@
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
-    hostname: "{{ inventory_hostname }}"
+    hostname: "{{ ansible_fqdn }}"
     discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode }}"
-  when: check_mk_agent_add_host_wato.changed
+    validate_certs: "{{ check_mk_agent_monitoring_host_validate_certificate }}"
+  become: false
+  when: check_mk_agent_add_host_wato.changed or 
+        check_mk_agent_local_checks_have_changed.changed or 
+        check_mk_agent_plugins_have_changed.changed
   notify:
     - Check_mk activate changes via WATO API
   delegate_to: localhost

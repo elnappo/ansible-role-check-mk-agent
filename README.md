@@ -9,6 +9,8 @@ Installs check mk\_agent. Run it with systemd-socket, SSH with sudo or SSH as ro
 * Setup firewall if systemd-socket ist used (ufw or firewalld)
 * Add SSH host key to check_mk server
 * Install check_mk agent plugins/local checks and their dependencies
+* Configure plugins through templates
+* Configure host labesl
 * **Add hosts to check_mk server via WATO API**
 
 ## Requirements
@@ -27,7 +29,7 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host:` Hostname of your check_mk server
 * `check_mk_agent_monitoring_user:` Username under which your check_mk instance runs
 * `check_mk_agent_plugins_requirements: []` Requirements for extra plugins
-* `check_mk_agent_plugins: []` List of extra plugins to install
+* `check_mk_agent_plugins: {}` Dict of extra plugins to install
 * `check_mk_agent_local_checks: {}`
 * `check_mk_agent_pubkey_file:` Path to SSH pubkey file
 * `check_mk_agent_add_to_wato: false`
@@ -36,8 +38,10 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host_url:`
 * `check_mk_agent_monitoring_host_wato_username:`
 * `check_mk_agent_monitoring_host_wato_secret:`
+* `check_mk_agent_monitoring_host_validate_certificate: true`
 * `check_mk_agent_setup_firewall: true` Add firewall rule (ufw/firewalld) when using systemd-socket or xinetd
 * `check_mk_agent_manual_install: false` Leave agent package installation to the user
+
 
 ## Included check_mk extra plugins
 Could be found under `files/plugins/`. As it is hard to keep these plugins
@@ -60,6 +64,41 @@ None.
     check_mk_agent_monitoring_host_url: http://cmk.example.com/monitoring/
     check_mk_agent_monitoring_host_wato_username: ansible
     check_mk_agent_monitoring_host_wato_secret: 7JTuBt6nETYHG1GS
+    check_mk_agent_monitoring_host_attributes: 
+      labels: 
+        os: linux
+        vm: 'yes'
+    check_mk_agent_plugins:
+      -
+        name: apache_status
+        config_file: apache_status.cfg
+        servers: 
+          - { protocol: http, address: localhost, port: 80 }
+          - { protocol: https, address: localhost, port: 443 }
+      -
+        name: nginx_status
+        config_file: nginx_status.cfg
+        servers:
+          - { protocol: http, address: localhost, port: 80 }
+          - { protocol: https, address: localhost, port: 443, page: nginx_status }
+      -
+        name: mk_logwatch
+        config_file: logwatch.cfg
+        logs:
+          - name: "/var/log/messages"
+            actions:
+              - { criticality: 'I', regexp: '.*INFO.*' }
+              - { criticality: 'C', regexp: '.*ERROR.*' }
+      -
+        name: mk_inventory.linux
+        config_file: mk_inventory.cfg
+        inventory_interval: 3
+      -
+        name: netstat.linux
+        config_file: netstat.cfg
+      -
+        name: mk_docker.py
+        config_file: docker.cfg
     check_mk_agent_local_checks:
       filecount:
         src: files/check_mk_local_checks/filecount
