@@ -2,7 +2,7 @@
 # tasks file for check_mk agent
 - name: Install check_mk_agent
   package:
-    name: check-mk-agent
+    name: "{{ check_mk_agent_package_name }}"
     state: present
   when: not check_mk_agent_manual_install
 
@@ -36,6 +36,7 @@
     group: root
     mode: 0755
   with_dict: "{{ check_mk_agent_local_checks }}"
+  when: item.value.cache_time is defined
 
 - name: Copy local checks
   copy:
