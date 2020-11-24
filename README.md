@@ -41,7 +41,6 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_package_name: check-mk-agent` Could be replaced with a url pointing to your packages hosted on your check-mk-server
 * `check_mk_agent_validate_api_ssl_certs: true` Validate ssl certs. Set to False if you are using self-signed ssl certs
 
-
 ## Included check_mk extra plugins
 Could be found under `files/plugins/`. As it is hard to keep these plugins
 up-to-date, these will be removed in a future version from the repository.
