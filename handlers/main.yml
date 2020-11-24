@@ -10,5 +10,6 @@
     server_url: "{{ check_mk_agent_monitoring_host_url }}"
     username: "{{ check_mk_agent_monitoring_host_wato_username }}"
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
+    validate_certs: "{{ check_mk_agent_validate_api_ssl_certs }}"
     activate_changes: true
   delegate_to: localhost

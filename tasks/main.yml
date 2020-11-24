@@ -166,6 +166,7 @@
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
     hostname: "{{ inventory_hostname }}"
     folder: "{{ check_mk_agent_monitoring_host_folder }}"
+    validate_certs: "{{ check_mk_agent_validate_api_ssl_certs }}"
     state: present
   when: check_mk_agent_add_to_wato
   register: check_mk_agent_add_host_wato
@@ -180,6 +181,7 @@
     secret: "{{ check_mk_agent_monitoring_host_wato_secret }}"
     hostname: "{{ inventory_hostname }}"
     discover_services: "{{ check_mk_agent_monitoring_host_discovery_mode }}"
+    validate_certs: "{{ check_mk_agent_validate_api_ssl_certs }}"
   when: check_mk_agent_add_host_wato.changed
   notify:
     - Check_mk activate changes via WATO API
