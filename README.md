@@ -38,6 +38,7 @@ Tested on Ubuntu 16.04, 18.04 and CentOS 7, should also run under Debian and Red
 * `check_mk_agent_monitoring_host_wato_secret:`
 * `check_mk_agent_setup_firewall: true` Add firewall rule (ufw/firewalld) when using systemd-socket or xinetd
 * `check_mk_agent_manual_install: false` Leave agent package installation to the user
+* `check_mk_agent_validate_api_ssl_certs: true` Validate ssl certs. Set to False if you are using self-signed ssl certs
 
 ## Included check_mk extra plugins
 Could be found under `files/plugins/`. As it is hard to keep these plugins
