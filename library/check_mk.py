@@ -188,7 +188,7 @@ class CheckMKAPI(object):
 
     def host_exists(self, hostname):
         return self._api_request("&action=get_host&effective_attributes=1", {"hostname": hostname},
-                                 False) != "Check_MK exception: No such host"
+                                 False) != "Checkmk exception: No such host"
 
 
 def main():
